@@ -45,6 +45,7 @@
                             <finalName>encapsulated-algorithm</finalName>
                             <shadedArtifactAttached>true</shadedArtifactAttached>
                             <shadedClassifierName>with-dependencies</shadedClassifierName>
+                            <outputDirectory>..</outputDirectory>
                             <minimizeJar>false</minimizeJar>
                         </configuration>
                     </execution>
