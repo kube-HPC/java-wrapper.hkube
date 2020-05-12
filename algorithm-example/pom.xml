@@ -9,4 +9,24 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>algorithm-example</artifactId>
+    <build>
+        <plugins>
+        <plugin>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <version>2.5.3</version>
+            <configuration>
+                <descriptor>src/main/assembly/assembly.xml</descriptor>
+            </configuration>
+            <executions>
+                <execution>
+                    <id>create-archive</id>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>single</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+    </build>
 </project>
