@@ -2,3 +2,6 @@ target/
 .idea/
 /encapsulated-algorithm.jar
 /encapsulated-algorithm.pom
+/wrapper.jar
+/original-encapsulated-algorithm.pom
+/original-encapsulated-algorithm.jar
