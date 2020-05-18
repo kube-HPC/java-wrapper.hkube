@@ -23,5 +23,6 @@
         <module>java-algo-parent</module>
         <module>wrapper</module>
         <module>algorithm-example</module>
+        <module>storage-s3</module>
     </modules>
 </project>

@@ -8,33 +8,41 @@ import org.json.JSONObject;
 
 import javax.websocket.*;
 import java.net.URI;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 @ClientEndpoint
-public class Wrapper {
+public class Wrapper implements ICommandSender {
     Session userSession = null;
     private IAlgorithm m_algorithm;
     JSONObject m_args;
     JSONArray m_input;
+    List<CommandResponseListener> listeners = new ArrayList<>();
+    HKubeAPIImpl hkubeAPI = new HKubeAPIImpl(this);
+
+
+
     private static final Logger logger = LogManager.getLogger();
 
-    public Wrapper(IAlgorithm algorithm ) {
-        m_algorithm=algorithm;
+    public Wrapper(IAlgorithm algorithm) {
+        m_algorithm = algorithm;
         connect();
     }
 
-    private void connect(){
+    public void addResponseListener(CommandResponseListener listener) {
+        listeners.add(listener);
+    }
+
+    private void connect() {
         String port = System.getenv("WORKER_SOCKET_PORT");
         String host = System.getenv("WORKER_SOCKET_HOST");
-        if (port == null){
+        if (port == null) {
             port = "3000";
         }
-        if (host == null){
+        if (host == null) {
             host = "localhost";
         }
-        String uriString = "ws://"+host+":"+port;
+        String uriString = "ws://" + host + ":" + port;
         try {
             logger.info("connecting to uri: " + uriString);
 
@@ -101,8 +109,8 @@ public class Wrapper {
     public void sendMessage(String command, JSONObject data) {
         logger.info("Sending message: " + command);
         Map<String, Object> toSend = new HashMap<String, Object>();
-        toSend.put("command",command);
-        toSend.put("data",data);
+        toSend.put("command", command);
+        toSend.put("data", data);
         JSONObject message = new JSONObject(toSend);
         this.userSession.getAsyncRemote().sendText(message.toString());
     }
@@ -121,49 +129,52 @@ public class Wrapper {
             JSONObject msgAsJson = new JSONObject(message);
             String command = (String) msgAsJson.get("command");
             JSONObject data = msgAsJson.optJSONObject("data");
+            listeners.forEach(listener -> {
+                listener.onCommand(command, data);
+            });
             logger.info("got command : " + command);
             CompletableFuture.supplyAsync(() -> {
                 try {
                     switch (command) {
                         case "initialize":
-                            m_args=data;
-                            if (m_args!=null){
-                                m_input=m_args.getJSONArray("input");
+                            m_args = data;
+                            if (m_args != null) {
+                                m_input = m_args.getJSONArray("input");
                             } else {
-                                m_input=new JSONArray();
+                                m_input = new JSONArray();
                             }
 //                            logger.info("data: "+data);
 
                             m_algorithm.Init(m_args);
-                            sendMessage("initialized",null);
+                            sendMessage("initialized", null);
                             break;
                         case "exit":
                             m_algorithm.Cleanup();
-                            sendMessage("exited",null);
+                            sendMessage("exited", null);
                             System.exit(0);
                             break;
                         case "start":
-                            sendMessage("started",null);
-                            try{
-                                JSONObject res = m_algorithm.Start(m_input);
-                                sendMessage("done",res);
-                            } catch (Exception ex){
+                            sendMessage("started", null);
+                            try {
+                                JSONObject res = m_algorithm.Start(m_input,hkubeAPI);
+                                sendMessage("done", res);
+                            } catch (Exception ex) {
                                 logger.error(ex);
                                 Map<String, String> res = new HashMap<>();
-                                res.put("code","Failed");
+                                res.put("code", "Failed");
                                 res.put("message", ex.toString());
-                                sendMessage("error",new JSONObject(res));
+                                sendMessage("error", new JSONObject(res));
                             } finally {
-                                m_args=new JSONObject();
-                                m_input=new JSONArray();
+                                m_args = new JSONObject();
+                                m_input = new JSONArray();
                             }
                             break;
                         case "stop":
                             m_algorithm.Stop();
-                            sendMessage("stopped",null);
+                            sendMessage("stopped", null);
                             break;
                         default:
-                            logger.info("got unknown command: " + command);
+                            logger.info("got command: " + command);
 
                     }
                 } catch (Exception exc) {
