@@ -1,5 +1,8 @@
 package hkube.algo.wrapper;
 
+import hkube.algo.CommandResponseListener;
+import hkube.algo.HKubeAPIImpl;
+import hkube.algo.ICommandSender;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.glassfish.tyrus.client.ClientManager;
@@ -13,10 +16,11 @@ import java.util.concurrent.CompletableFuture;
 
 @ClientEndpoint
 public class Wrapper implements ICommandSender {
+    private final Config mConfig;
     Session userSession = null;
-    private IAlgorithm m_algorithm;
-    JSONObject m_args;
-    JSONArray m_input;
+    private IAlgorithm mAlgorithm;
+    JSONObject mArgs;
+    JSONArray mInput;
     List<CommandResponseListener> listeners = new ArrayList<>();
     HKubeAPIImpl hkubeAPI = new HKubeAPIImpl(this);
 
@@ -24,8 +28,9 @@ public class Wrapper implements ICommandSender {
 
     private static final Logger logger = LogManager.getLogger();
 
-    public Wrapper(IAlgorithm algorithm) {
-        m_algorithm = algorithm;
+    public Wrapper(IAlgorithm algorithm,Config config) {
+        mConfig = config;
+        mAlgorithm = algorithm;
         connect();
     }
 
@@ -34,15 +39,7 @@ public class Wrapper implements ICommandSender {
     }
 
     private void connect() {
-        String port = System.getenv("WORKER_SOCKET_PORT");
-        String host = System.getenv("WORKER_SOCKET_HOST");
-        if (port == null) {
-            port = "3000";
-        }
-        if (host == null) {
-            host = "localhost";
-        }
-        String uriString = "ws://" + host + ":" + port;
+        String uriString = "ws://" + mConfig.getHost() + ":" + mConfig.getPort();
         try {
             logger.info("connecting to uri: " + uriString);
 
@@ -62,7 +59,6 @@ public class Wrapper implements ICommandSender {
 //                    logger.error(exc);
                 }
                 Thread.sleep(200);
-//                logger.info("Retrying to connect to websocket");
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -91,7 +87,7 @@ public class Wrapper implements ICommandSender {
     public void onClose(Session userSession, CloseReason reason) {
         logger.info("websocket closed with reason :" + reason);
         this.userSession = null;
-        m_algorithm.Cleanup();
+        mAlgorithm.Cleanup();
         System.exit(-1);
     }
 
@@ -137,26 +133,26 @@ public class Wrapper implements ICommandSender {
                 try {
                     switch (command) {
                         case "initialize":
-                            m_args = data;
-                            if (m_args != null) {
-                                m_input = m_args.getJSONArray("input");
+                            mArgs = data;
+                            if (mArgs != null) {
+                                mInput = mArgs.getJSONArray("input");
                             } else {
-                                m_input = new JSONArray();
+                                mInput = new JSONArray();
                             }
 //                            logger.info("data: "+data);
 
-                            m_algorithm.Init(m_args);
+                            mAlgorithm.Init(mArgs);
                             sendMessage("initialized", null);
                             break;
                         case "exit":
-                            m_algorithm.Cleanup();
+                            mAlgorithm.Cleanup();
                             sendMessage("exited", null);
                             System.exit(0);
                             break;
                         case "start":
                             sendMessage("started", null);
                             try {
-                                JSONObject res = m_algorithm.Start(m_input,hkubeAPI);
+                                JSONObject res = mAlgorithm.Start(mInput,hkubeAPI);
                                 sendMessage("done", res);
                             } catch (Exception ex) {
                                 logger.error(ex);
@@ -165,12 +161,12 @@ public class Wrapper implements ICommandSender {
                                 res.put("message", ex.toString());
                                 sendMessage("error", new JSONObject(res));
                             } finally {
-                                m_args = new JSONObject();
-                                m_input = new JSONArray();
+                                mArgs = new JSONObject();
+                                mInput = new JSONArray();
                             }
                             break;
                         case "stop":
-                            m_algorithm.Stop();
+                            mAlgorithm.Stop();
                             sendMessage("stopped", null);
                             break;
                         default:

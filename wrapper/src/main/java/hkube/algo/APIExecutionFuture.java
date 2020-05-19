@@ -1,4 +1,4 @@
-package hkube.algo.wrapper;
+package hkube.algo;
 
 import org.json.JSONObject;
 

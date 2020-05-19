@@ -28,7 +28,7 @@ class Main {
             Class<?> clazz = ucl.loadClass(conf.getAlgorithmClassName());
             Constructor<?> ctor = clazz.getConstructor();
             IAlgorithm algorithm = (IAlgorithm) ctor.newInstance(new Object[]{});
-            new Wrapper(algorithm);
+            new Wrapper(algorithm,conf);
 
             while (true) {
                 System.in.read();

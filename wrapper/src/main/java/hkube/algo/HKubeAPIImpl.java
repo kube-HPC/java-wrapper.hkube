@@ -1,4 +1,4 @@
-package hkube.algo.wrapper;
+package hkube.algo;
 
 import hkube.api.IHKubeAPI;
 import hkube.api.INode;
@@ -28,11 +28,11 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
         APIExecutionFuture future = new APIExecutionFuture();
         String executionId = getExecutionId(future);
         JSONObject data = new JSONObject();
-        data.put("execId", executionId);
-        data.put("algorithmName", name);
-        data.put("input", input);
-        data.put("resultAsRaw", resultAsRaw);
-        commandSender.sendMessage("startAlgorithmExecution", data);
+        data.put(Consts.execId, executionId);
+        data.put(Consts.algorithmName, name);
+        data.put(Consts.input, input);
+        data.put(Consts.resultAsRaw, resultAsRaw);
+        commandSender.sendMessage(Consts.startAlgorithmExecution, data);
         return future;
     }
 
@@ -47,11 +47,11 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
         APIExecutionFuture future = new APIExecutionFuture();
         String executionId = getExecutionId(future);
         JSONObject data = new JSONObject();
-        data.put("subPipelineId", executionId);
+        data.put(Consts.subPipelineId, executionId);
         Map subPipeline = new HashMap();
         subPipeline.put("name", name);
-        subPipeline.put("flowInput", flowInput);
-        data.put("subPipeline", subPipeline);
+        subPipeline.put(Consts.flowInput, flowInput);
+        data.put(Consts.subPipeline, subPipeline);
         commandSender.sendMessage("startStoredSubPipeline", data);
         return future;
     }
