@@ -46,7 +46,7 @@
                             <finalName>encapsulated-algorithm</finalName>
                             <shadedArtifactAttached>true</shadedArtifactAttached>
                             <shadedClassifierName>with-dependencies</shadedClassifierName>
-                            <outputDirectory>..</outputDirectory>
+                            <outputDirectory>${session.executionRootDirectory}</outputDirectory>
                             <minimizeJar>false</minimizeJar>
                         </configuration>
                     </execution>
