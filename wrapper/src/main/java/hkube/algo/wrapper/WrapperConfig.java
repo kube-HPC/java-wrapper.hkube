@@ -1,6 +1,8 @@
 package hkube.algo.wrapper;
 
-public class Config {
+import hkube.utils.Config;
+
+public class WrapperConfig extends Config {
     String port;
     String host;
     String algorithmClassName;
@@ -17,16 +19,4 @@ public class Config {
 
         return getStrEnvValue("ALGORITHM_ENTRY_POINT",null);
     }
-    String getStrEnvValue(String name ,String defaultValue){
-       String value =  System.getenv(name);
-       if (value == null){
-           if (defaultValue == null){
-               throw new RuntimeException("Missing environment parameter "+ name);
-           }
-           return defaultValue;
-       }
-       else return  value;
-    }
-
-
 }

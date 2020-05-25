@@ -16,7 +16,7 @@ import java.util.concurrent.CompletableFuture;
 
 @ClientEndpoint
 public class Wrapper implements ICommandSender {
-    private final Config mConfig;
+    private final WrapperConfig mConfig;
     Session userSession = null;
     private IAlgorithm mAlgorithm;
     JSONObject mArgs;
@@ -28,7 +28,7 @@ public class Wrapper implements ICommandSender {
 
     private static final Logger logger = LogManager.getLogger();
 
-    public Wrapper(IAlgorithm algorithm,Config config) {
+    public Wrapper(IAlgorithm algorithm, WrapperConfig config) {
         mConfig = config;
         mAlgorithm = algorithm;
         connect();

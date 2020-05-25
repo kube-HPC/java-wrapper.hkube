@@ -24,7 +24,7 @@ class Main {
             }
             URL jarURL = new URL("file","",jarFile.getAbsolutePath());
             URLClassLoader ucl = URLClassLoader.newInstance(new URL[]{jarURL},Main.class.getClassLoader());
-            Config conf = new Config();
+            WrapperConfig conf = new WrapperConfig();
             Class<?> clazz = ucl.loadClass(conf.getAlgorithmClassName());
             Constructor<?> ctor = clazz.getConstructor();
             IAlgorithm algorithm = (IAlgorithm) ctor.newInstance(new Object[]{});

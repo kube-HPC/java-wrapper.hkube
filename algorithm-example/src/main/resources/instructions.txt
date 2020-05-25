@@ -37,7 +37,7 @@ Create a HKube java written algorithm.
         * Make sure any dependency your project depends on in runtime, is included in pom.xml dependencies list.
 
     d) Access to private repository
-        The projects you create sources, will later be deployed to hkube, remotely "maven package" will be ran on your project. You can overwrite the settings.xml used by hkube, by placeing your own settings.xml under the projects maven resource folder.
+        The sources of the projects you create , will later be deployed to hkube. "maven package" command will be ran on your project inside hkubes kubernetis cluster. You can overwrite the settings.xml used by hkubes maven, by placeing your own settings.xml under the projects maven resource folder.
         kubernetis Secrets values of maven_user and maven_token, can be accessed in the settings file as follows:
 
            <servers>
