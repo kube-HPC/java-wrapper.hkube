@@ -1,6 +1,6 @@
 package hkube.storage.fs;
 
-import hkube.storage.IAdapter;
+import hkube.storage.ISimplePathStorage;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -9,7 +9,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class FSAdapter implements IAdapter {
+public class FSAdapter implements ISimplePathStorage {
+    public static ISimplePathStorage getInstance(){
+        return new FSAdapter(new FSConfig());
+    }
     File basePath;
     public FSAdapter(FSConfig config) {
         String basePathStr = config.getBaseDir();
