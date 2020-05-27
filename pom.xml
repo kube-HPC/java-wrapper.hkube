@@ -41,5 +41,8 @@
         <module>storage</module>
         <module>storage-s3</module>
         <module>storage-fs</module>
+        <module>zmq-adapter</module>
+        <module>communication</module>
+        <module>encoding</module>
     </modules>
 </project>
