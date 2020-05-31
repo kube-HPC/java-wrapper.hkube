@@ -1,85 +1,57 @@
 package hkube.encoding;
 
-import org.msgpack.MessagePack;
-import org.msgpack.packer.Packer;
-import org.msgpack.type.ArrayValue;
-import org.msgpack.type.MapValue;
-import org.msgpack.type.Value;
-import org.msgpack.type.ValueType;
-import org.msgpack.unpacker.Unpacker;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
+
 import java.util.HashMap;
 import java.util.Map;
 
-public class MSGPackEncoder implements IEncoder{
+import hkube.utils.Timing;
+
+import org.msgpack.jackson.dataformat.MessagePackFactory;
+
+public class MSGPackEncoder extends BaseEncoder implements IEncoder {
+    final static int DATA_TYPE_ENCODED = 3;
+    private static final Logger logger = LogManager.getLogger();
 
     @Override
     public byte[] encode(Map obj) {
+        Timing timing = new Timing(logger, "encode");
+        timing.start();
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        MessagePack msgpack = new MessagePack();
-        Packer packer = msgpack.createPacker(out);
+        ObjectMapper objectMapper = new ObjectMapper(new MessagePackFactory());
         try {
-            packer.write(obj);
-            packer.close();
+            out.write(objectMapper.writeValueAsBytes(obj));
+            out.write(createFooter());
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        return out.toByteArray();
+        byte[] result = out.toByteArray();
+        timing.end();
+        timing.logDebug();
+        return result;
     }
 
     @Override
     public Map decode(byte[] data) {
-        MessagePack msgpack = new MessagePack();
-        Unpacker unpacker = msgpack.createUnpacker(new ByteArrayInputStream(data));
+        Footer info = getInfo(data);
+        byte[] encodedData = removeFooter(data);
+        Timing timing = new Timing(logger, "decode");
+        timing.start();
+        ObjectMapper objectMapper = new ObjectMapper(new MessagePackFactory());
         try {
-            MapValue mapValue = unpacker.readValue().asMapValue();
-            Map result = new HashMap();
-            for (Map.Entry<Value, Value> e : mapValue.entrySet()) {
-                String key = e.getKey().asRawValue().getString();
-                Object val = deserializeObject(e.getValue());
-                result.put(key, val);
-            }
-            return result;
-        } catch (IOException e) {
-           throw new RuntimeException(e);
+            return objectMapper.readValue(encodedData, HashMap.class);
+        } catch (Throwable e) {
+            return null;
         }
     }
 
-    private Object deserializeObject(Value v) {
-        ValueType t = v.getType();
-        if (t == ValueType.NIL) {
-            return null;
-        } else if (t == ValueType.BOOLEAN) { // boolean
-            return v.asBooleanValue().getBoolean();
-        } else if (t == ValueType.INTEGER) { // integer, long, ...
-            return v.asIntegerValue().getLong();
-        } else if (t == ValueType.FLOAT) { // float, double, ..
-            return v.asFloatValue().getFloat();
-        } else if (t == ValueType.ARRAY) { // array
-            ArrayList list = new ArrayList();
-            ArrayValue arrayValue = v.asArrayValue();
-            for(Value value:arrayValue){
-                list.add(deserializeObject(value));
-            }
-            return list;
-        } else if (t == ValueType.MAP) { // map
-            MapValue mapValue = v.asMapValue();
-            Map result = new HashMap();
-            for (Map.Entry<Value, Value> e : mapValue.entrySet()) {
-                String key = e.getKey().asRawValue().getString();
-                Object val = deserializeObject(e.getValue());
-                result.put(key, val);
-            }
-            return result;
-        } else if (t == ValueType.RAW) { // string
-            return v.asRawValue().getString();
-        } else {
-            throw new RuntimeException("fatal error");
-        }
+    @Override
+    public Integer getEncodingType() {
+        return DATA_TYPE_ENCODED;
     }
 }
