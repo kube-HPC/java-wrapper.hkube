@@ -19,19 +19,11 @@ public class EncodingTest {
         rootMap.put("field1",5);
         secondLevelMap.put("field2","value2");
         rootMap.put("field3",secondLevelMap);
-        JSONObject jsonObject = new JSONObject(rootMap);
+        rootMap.put("field4","Hello".getBytes());
         byte[] mybytes = encoder.encode(rootMap);
         Map decodedObj = encoder.decode(mybytes);
-        System.out.println(decodedObj.get("field1"));
-    }
-
-    @Test
-    public void readFile() throws IOException {
-        File file = new File("/tmp/output.txt");
-        FileInputStream stream = new FileInputStream(file);
-        byte [] bytes = stream.readAllBytes();
-        IEncoder encoder = new MSGPackEncoder();
-        Map map = encoder.decode(bytes);
-        System.out.println(map);
+        assert decodedObj.get("field1").equals(5);
+        assert decodedObj.get("field4").getClass().equals(byte[].class);
+        assert new String((byte[])decodedObj.get("field4")).equals("Hello");
     }
 }
