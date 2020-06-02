@@ -1,11 +1,9 @@
 package hkube.communication.zmq;
 
+import hkube.communication.CommConfig;
 import org.junit.*;
 import hkube.communication.IRequestListener;
-
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
@@ -26,7 +24,7 @@ public class TestZMQ {
 
     @Test
     public void testSendReceive() throws TimeoutException{
-        server = new ZMQServer(new ZMConfiguration());
+        server = new ZMQServer(new CommConfig());
         class ServerListener implements IRequestListener {
             @Override
             public void onRequest(byte[] request) {
@@ -35,14 +33,14 @@ public class TestZMQ {
         }
         ServerListener listener = new ServerListener();
         server.addRequestsListener(listener);
-        ZMQRequest request = new ZMQRequest("localhost", new ZMConfiguration().getListeningPort(), new ZMConfiguration());
+        ZMQRequest request = new ZMQRequest("localhost", new CommConfig().getListeningPort(), new CommConfig());
         String rep = new String(request.send("maaa".getBytes()));
         assert rep.equals("maaa");
     }
 
     @Test
     public void test2Clients() throws InterruptedException ,TimeoutException{
-        server = new ZMQServer(new ZMConfiguration());
+        server = new ZMQServer(new CommConfig());
         class ServerListener implements IRequestListener {
             @Override
             public void onRequest(byte[] request) {
@@ -52,21 +50,18 @@ public class TestZMQ {
         ServerListener listener = new ServerListener();
         server.addRequestsListener(listener);
         final Map results = new HashMap<>();
-        Thread thread1 = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    ZMQRequest request = new ZMQRequest("localhost", new ZMConfiguration().getListeningPort(), new ZMConfiguration());
-                    String rep = new String(request.send("maaa".getBytes()));
-                    results.put("thread1", rep);
-                }
-                catch (TimeoutException e){
-                    results.put("thread1", "Timeout error occurred");
-                }
+        Thread thread1 = new Thread(() -> {
+            try {
+                ZMQRequest request = new ZMQRequest("localhost", new CommConfig().getListeningPort(), new CommConfig());
+                String rep = new String(request.send("maaa".getBytes()));
+                results.put("thread1", rep);
+            }
+            catch (TimeoutException e){
+                results.put("thread1", "Timeout error occurred");
             }
         });
         thread1.start();
-        ZMQRequest request = new ZMQRequest("localhost", new ZMConfiguration().getListeningPort(), new ZMConfiguration());
+        ZMQRequest request = new ZMQRequest("localhost", new CommConfig().getListeningPort(), new CommConfig());
         String rep = new String(request.send("muu".getBytes()));
         thread1.join();
         assert rep.equals("muu");
@@ -74,8 +69,8 @@ public class TestZMQ {
     }
 
     @Test
-    public void testTimeOut() throws TimeoutException{
-        server = new ZMQServer(new ZMConfiguration());
+    public void testTimeOut() {
+        server = new ZMQServer(new CommConfig());
         class ServerListener implements IRequestListener {
             @Override
             public void onRequest(byte[] request) {
@@ -89,22 +84,18 @@ public class TestZMQ {
         }
         ServerListener listener = new ServerListener();
         server.addRequestsListener(listener);
-        ZMConfiguration config = new ZMConfiguration() {
+        CommConfig config = new CommConfig() {
             public Integer getTimeout() {
                 return 20;
             }
         };
         ZMQRequest request = new ZMQRequest("localhost", config.getListeningPort(), config);
-        Assert.assertThrows(TimeoutException.class,() -> {
-            String rep = new String(request.send("nothing".getBytes()));
-        });
+        Assert.assertThrows(TimeoutException.class,() -> request.send("nothing".getBytes()));
     }
 
     @Test
     public void noServer() {
-        ZMQRequest request = new ZMQRequest("localhost", new ZMConfiguration().getListeningPort(), new ZMConfiguration());
-        Assert.assertThrows(TimeoutException.class,() -> {
-            String rep = new String(request.send("maaa".getBytes()));
-        });
+        ZMQRequest request = new ZMQRequest("localhost", new CommConfig().getListeningPort(), new CommConfig());
+        Assert.assertThrows(TimeoutException.class,() -> request.send("maaa".getBytes()));
     }
 }

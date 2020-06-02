@@ -6,6 +6,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 public interface IEncoder {
-    public byte[] encode(Map obj);
+
+
+    byte[] encode(Object obj);
+
+    byte[] encodeNoHeader(Object obj);
+
     public Map decode(byte[] data);
+
+    Map decodeNoHeader(byte[] data);
 }

@@ -19,14 +19,35 @@ public class MSGPackEncoder extends BaseEncoder implements IEncoder {
     private static final Logger logger = LogManager.getLogger();
 
     @Override
-    public byte[] encode(Map obj) {
+    public byte[] encode(Object obj) {
+        Timing timing = new Timing(logger, "encode");
+        timing.start();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ObjectMapper objectMapper = new ObjectMapper(new MessagePackFactory());
+        try {
+            out.write(createHeader(!(obj instanceof  byte[])));
+            if(obj instanceof  byte[]) {
+                out.write((byte[]) obj);
+            }else {
+                out.write(objectMapper.writeValueAsBytes(obj));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        byte[] result = out.toByteArray();
+        timing.end();
+        timing.logDebug();
+        return result;
+    }
+
+    @Override
+    public byte[] encodeNoHeader(Object obj) {
         Timing timing = new Timing(logger, "encode");
         timing.start();
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ObjectMapper objectMapper = new ObjectMapper(new MessagePackFactory());
         try {
             out.write(objectMapper.writeValueAsBytes(obj));
-            out.write(createFooter());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -38,20 +59,32 @@ public class MSGPackEncoder extends BaseEncoder implements IEncoder {
 
     @Override
     public Map decode(byte[] data) {
-        Footer info = getInfo(data);
-        byte[] encodedData = removeFooter(data);
+
+        byte[] encodedData = removeHeader(data);
         Timing timing = new Timing(logger, "decode");
         timing.start();
         ObjectMapper objectMapper = new ObjectMapper(new MessagePackFactory());
         try {
+
             return objectMapper.readValue(encodedData, HashMap.class);
         } catch (Throwable e) {
             return null;
         }
     }
-
+    @Override
+    public Map decodeNoHeader(byte[] data) {
+        Timing timing = new Timing(logger, "decode");
+        timing.start();
+        ObjectMapper objectMapper = new ObjectMapper(new MessagePackFactory());
+        try {
+            return objectMapper.readValue(data, HashMap.class);
+        } catch (Throwable e) {
+            return null;
+        }
+    }
     @Override
     public Integer getEncodingType() {
         return DATA_TYPE_ENCODED;
     }
+
 }
