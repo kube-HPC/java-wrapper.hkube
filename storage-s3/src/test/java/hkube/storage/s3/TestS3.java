@@ -10,6 +10,8 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import hkube.storage.ISimplePathStorage;
+import hkube.storage.IStorageConfig;
+import hkube.utils.Config;
 import org.junit.*;
 
 import java.io.File;
@@ -20,27 +22,28 @@ import java.util.List;
 public class TestS3 {
     static S3Config config = new S3Config();
     static String bucket = "stam-bucket";
+
     @BeforeClass
-    static public void createBucket(){
+    static public void createBucket() {
         AWSCredentials creds = new BasicAWSCredentials(config.getAccessKeyId(), config.getSecretAccessKey());
         AmazonS3 conn = AmazonS3ClientBuilder.standard().withCredentials(new AWSStaticCredentialsProvider(creds)).withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration("http://127.0.0.1:9000", Regions.DEFAULT_REGION.toString())).build();
         try {
             conn.createBucket(bucket);
-        }
-        catch (Throwable e){
+        } catch (Throwable e) {
         }
     }
+
     @AfterClass
-    static public void deleteBucket(){
+    static public void deleteBucket() {
         AWSCredentials creds = new BasicAWSCredentials(config.getAccessKeyId(), config.getSecretAccessKey());
         AmazonS3 conn = AmazonS3ClientBuilder.standard().withCredentials(new AWSStaticCredentialsProvider(creds)).withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration("http://127.0.0.1:9000", Regions.DEFAULT_REGION.toString())).build();
         try {
             conn.deleteBucket(bucket);
-        }
-        catch (Throwable e){
+        } catch (Throwable e) {
 
         }
     }
+
     @After
     public void deleteFiles() {
         AWSCredentials creds = new BasicAWSCredentials(config.getAccessKeyId(), config.getSecretAccessKey());
@@ -50,7 +53,7 @@ public class TestS3 {
         List result = new ArrayList();
         do {
             for (S3ObjectSummary objectSummary : objects.getObjectSummaries()) {
-                conn.deleteObject(bucket,objectSummary.getKey());
+                conn.deleteObject(bucket, objectSummary.getKey());
             }
             objects = conn.listNextBatchOfObjects(objects);
         } while (objects.isTruncated());
@@ -58,28 +61,49 @@ public class TestS3 {
 
     @Test
     public void testPutGet() throws FileNotFoundException {
-        ISimplePathStorage adapter = new S3Adapter(config);
-        adapter.put(File.separator+bucket+File.separator+ "dir1" + File.separator + "dir2" + File.separator + "Stam", "Kloom".getBytes());
-        String output = new String(adapter.get(File.separator+bucket+File.separator+ "dir1" + File.separator + "dir2" + File.separator + "Stam"));
+        ISimplePathStorage adapter = new S3Adapter();
+        adapter.setConfig(storageConfig);
+        adapter.put(File.separator + bucket + File.separator + "dir1" + File.separator + "dir2" + File.separator + "Stam", "Kloom".getBytes());
+        String output = new String(adapter.get(File.separator + bucket + File.separator + "dir1" + File.separator + "dir2" + File.separator + "Stam"));
         assert output.equals("Kloom");
     }
+
     @Test
     public void testList() throws FileNotFoundException {
-        ISimplePathStorage adapter = new S3Adapter(config);
-        adapter.put(File.separator+bucket+File.separator+ "dir5" + File.separator + "dir6" + File.separator + "Stam", "Kloom".getBytes());
-        adapter.put(File.separator+bucket+File.separator+ "dir1" + File.separator + "dir2" + File.separator + "Stam", "Kloom".getBytes());
-        adapter.put(File.separator+bucket+File.separator+ "dir1" + File.separator + "dir3" + File.separator + "Stam", "Kloom".getBytes());
-        List dirContent = adapter.list(File.separator+bucket+File.separator+ "dir1");
-        assert dirContent.size()==2;
-        assert dirContent.contains( "dir1" + File.separator + "dir3" + File.separator + "Stam");
+        ISimplePathStorage adapter = new S3Adapter();
+        adapter.setConfig(storageConfig);
+        adapter.put(File.separator + bucket + File.separator + "dir5" + File.separator + "dir6" + File.separator + "Stam", "Kloom".getBytes());
+        adapter.put(File.separator + bucket + File.separator + "dir1" + File.separator + "dir2" + File.separator + "Stam", "Kloom".getBytes());
+        adapter.put(File.separator + bucket + File.separator + "dir1" + File.separator + "dir3" + File.separator + "Stam", "Kloom".getBytes());
+        List dirContent = adapter.list(File.separator + bucket + File.separator + "dir1");
+        assert dirContent.size() == 2;
+        assert dirContent.contains("dir1" + File.separator + "dir3" + File.separator + "Stam");
         assert dirContent.contains("dir1" + File.separator + "dir2" + File.separator + "Stam");
     }
 
     @Test
     public void notFoundException() {
         Assert.assertThrows(FileNotFoundException.class, () -> {
-            ISimplePathStorage adapter = new S3Adapter(config);
-            adapter.get(File.separator+bucket+File.separator+ "dir1" + File.separator + "dir2" + File.separator + "Ain");
+            ISimplePathStorage adapter = new S3Adapter();
+            adapter.setConfig(storageConfig);
+            adapter.get(File.separator + bucket + File.separator + "dir1" + File.separator + "dir2" + File.separator + "Ain");
         });
     }
+
+    IStorageConfig storageConfig = new IStorageConfig() {
+        @Override
+        public String getStorageType() {
+            return null;
+        }
+
+        @Override
+        public String getClusterName() {
+            return null;
+        }
+
+        @Override
+        public Config getTypeSpecificConfig() {
+            return config;
+        }
+    };
 }

@@ -1,6 +1,7 @@
 package hkube.communication.zmq;
 
-import hkube.communication.CommConfig;
+
+import hkube.communication.ICommConfig;
 import hkube.communication.IRequest;
 import org.zeromq.SocketType;
 import org.zeromq.ZMQ;
@@ -11,7 +12,7 @@ import java.util.concurrent.TimeoutException;
 public class ZMQRequest implements IRequest {
     ZMQ.Socket socket;
 
-    public ZMQRequest(String host, String port, CommConfig config) {
+    public ZMQRequest(String host, String port, ICommConfig config) {
         ZContext context = new ZContext();
 
         socket = context.createSocket(SocketType.REQ);

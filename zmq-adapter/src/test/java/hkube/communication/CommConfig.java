@@ -2,7 +2,7 @@ package hkube.communication;
 
 import hkube.utils.Config;
 
-public class CommConfig extends Config {
+public class CommConfig extends Config implements ICommConfig {
     public Integer getMaxCacheSize() {
         return getNumericEnvValue("DISCOVERY_MAX_CACHE_SIZE", 3);
     }

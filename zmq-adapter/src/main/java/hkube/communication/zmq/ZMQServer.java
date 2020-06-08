@@ -1,6 +1,6 @@
 package hkube.communication.zmq;
 
-import hkube.communication.CommConfig;
+import hkube.communication.ICommConfig;
 import hkube.communication.IRequestListener;
 import hkube.communication.IRequestServer;
 
@@ -16,7 +16,7 @@ public class ZMQServer implements IRequestServer {
     private ZMQ.Socket socket = null;
     private List<IRequestListener> listeners = new ArrayList();
     Thread thread;
-    public ZMQServer(CommConfig config) {
+    public ZMQServer(ICommConfig config) {
         ZContext context = new ZContext();
         socket = context.createSocket(SocketType.REP);
         socket.bind("tcp://*:" + config.getListeningPort());

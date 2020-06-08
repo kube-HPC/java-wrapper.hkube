@@ -3,10 +3,9 @@ package hkube.algo.wrapper;
 import hkube.algo.CommandResponseListener;
 import hkube.algo.HKubeAPIImpl;
 import hkube.algo.ICommandSender;
-import hkube.communication.CommConfig;
 import hkube.communication.DataServer;
 import hkube.communication.zmq.ZMQServer;
-import hkube.storage.StorageConfig;
+import hkube.storage.IStorageConfig;
 import hkube.storage.StorageFactory;
 import hkube.storage.TaskStorage;
 import org.apache.logging.log4j.LogManager;
@@ -29,8 +28,8 @@ public class Wrapper implements ICommandSender {
     JSONArray mInput;
     List<CommandResponseListener> listeners = new ArrayList<>();
     HKubeAPIImpl hkubeAPI = new HKubeAPIImpl(this);
-    ZMQServer zmqServer = new ZMQServer(new CommConfig());
-    DataServer dataServer = new DataServer(zmqServer);
+    ZMQServer zmqServer ;
+    DataServer dataServer;
     TaskStorage taskResultStorage;
 
 
@@ -39,8 +38,10 @@ public class Wrapper implements ICommandSender {
 
     public Wrapper(IAlgorithm algorithm, WrapperConfig config) {
         mConfig = config;
+        zmqServer = new ZMQServer(mConfig.commConfig);
+        dataServer= new DataServer(zmqServer,mConfig.commConfig);
         mAlgorithm = algorithm;
-        taskResultStorage = new StorageFactory(new StorageConfig()).getTaskStorage();
+        taskResultStorage = new StorageFactory(config.storageConfig).getTaskStorage();
         connect();
     }
 
@@ -163,7 +164,7 @@ public class Wrapper implements ICommandSender {
                         case "start":
                             sendMessage("started", null);
                             try {
-                                DataAdapter dataAdapter = new DataAdapter();
+                                DataAdapter dataAdapter = new DataAdapter(mConfig);
                                 dataAdapter.placeData(mArgs);
                                 JSONObject res = mAlgorithm.Start(mInput,hkubeAPI);
                                 String taskId = (String)mArgs.get("taskId");
@@ -172,7 +173,7 @@ public class Wrapper implements ICommandSender {
                                 discoveryData.put("taskId",taskId);
                                 JSONObject discoveryComm = new JSONObject();
                                 discoveryComm.put("host","localhost");
-                                discoveryComm.put("port",new CommConfig().getListeningPort());
+                                discoveryComm.put("port", mConfig.commConfig.getListeningPort());
                                 sendMessage( "storing",discoveryComm );
                                 taskResultStorage.put((String) mArgs.get("jobId"),taskId,res);
                                 sendMessage("done",new JSONObject());

@@ -2,7 +2,7 @@ package hkube.storage;
 
 import hkube.utils.Config;
 
-public class StorageConfig extends Config {
+public class StorageConfig extends Config implements IStorageConfig {
     public String getStorageType() {
         return getStrEnvValue("STORAGE_TYPE", "fs");
     }
@@ -10,4 +10,6 @@ public class StorageConfig extends Config {
     public String getClusterName() {
         return getStrEnvValue("CLUSTER_NAME", "local");
     }
+    public Config getTypeSpecificConfig(){return  null;}
+
 }
