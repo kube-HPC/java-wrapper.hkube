@@ -26,7 +26,7 @@ public class StorageTest {
         taskStorage.put("job2","task2","job2_task2".getBytes());
         sotrage.put("/bucket1/path1","path1".getBytes());
         sotrage.put("/bucket1/path2","path2".getBytes());
-        String job1_task1 =  new String(taskStorage.get("job1","task1"));
+        String job1_task1 =  new String((byte[])taskStorage.get("job1","task1"));
         assert job1_task1.equals("job1_task1");
         String path1 = new String( sotrage.get("/bucket1/path1"));
         assert path1.equals("path1");

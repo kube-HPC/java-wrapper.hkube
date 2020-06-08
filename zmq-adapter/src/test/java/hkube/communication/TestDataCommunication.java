@@ -5,6 +5,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import hkube.communication.zmq.ZMQServer;
+import org.junit.After;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -17,10 +18,25 @@ import java.util.concurrent.TimeoutException;
 
 
 public class TestDataCommunication {
+    ZMQServer server;
+
+    @After
+    public void closeResources() {
+        if (server != null) {
+            try {
+                server.close();
+            } finally {
+                server = null;
+            }
+        }
+        else System.out.println("server is null");
+    }
+
     @Test
     public void getDataOldTaskId() throws IOException, URISyntaxException, TimeoutException {
         CommConfig conf = new CommConfig();
-        DataServer ds = new DataServer(new ZMQServer(conf));
+        server = new ZMQServer(conf);
+        DataServer ds = new DataServer(server);
         JSONObject data1 = parseJSON("data1.json");
         ds.addTaskData("taskId1",data1);
         ZMQRequest zmqr = new ZMQRequest("localhost", conf.getListeningPort(), conf);
@@ -50,6 +66,7 @@ public class TestDataCommunication {
                 .toURI())));
         return new JSONObject(content);
     }
+
 
 }
 

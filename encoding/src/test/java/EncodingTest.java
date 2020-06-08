@@ -21,7 +21,7 @@ public class EncodingTest {
         rootMap.put("field3",secondLevelMap);
         rootMap.put("field4","Hello".getBytes());
         byte[] mybytes = encoder.encode(rootMap);
-        Map decodedObj = encoder.decode(mybytes);
+        Map decodedObj = (Map)encoder.decode(mybytes);
         assert decodedObj.get("field1").equals(5);
         assert decodedObj.get("field4").getClass().equals(byte[].class);
         assert new String((byte[])decodedObj.get("field4")).equals("Hello");

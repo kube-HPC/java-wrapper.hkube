@@ -16,7 +16,22 @@ public class WrapperConfig extends Config {
     }
 
     public String getAlgorithmClassName() {
-
         return getStrEnvValue("ALGORITHM_ENTRY_POINT",null);
     }
+
+    public String getStorageType(){
+        return getStrEnvValue("STORAGE_TYPE","fs");
+    }
+
+    public String getEncodingType(){
+        return "msgpack";
+    }
+    public String getStorageEncodingType(){
+        return "json";
+    }
+
+    public String getStorageVersion(){
+        return "v2";
+    }
+
 }

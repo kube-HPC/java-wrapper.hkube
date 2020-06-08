@@ -26,6 +26,10 @@
     <orderEntry type="library" name="Maven: joda-time:joda-time:2.8.1" level="project" />
     <orderEntry type="library" name="Maven: com.amazonaws:jmespath-java:1.11.784" level="project" />
     <orderEntry type="module" module-name="storage" />
+    <orderEntry type="module" module-name="encoding" />
+    <orderEntry type="library" name="Maven: org.msgpack:jackson-dataformat-msgpack:0.8.20" level="project" />
+    <orderEntry type="library" name="Maven: org.msgpack:msgpack-core:0.8.20" level="project" />
+    <orderEntry type="library" name="Maven: org.json:json:20190722" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.junit.jupiter:junit-jupiter:5.7.0-M1" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.junit.jupiter:junit-jupiter-api:5.7.0-M1" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.apiguardian:apiguardian-api:1.1.0" level="project" />

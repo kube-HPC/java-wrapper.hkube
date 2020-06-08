@@ -12,7 +12,7 @@ public interface IEncoder {
 
     byte[] encodeNoHeader(Object obj);
 
-    public Map decode(byte[] data);
+    public Object decode(byte[] data);
 
-    Map decodeNoHeader(byte[] data);
+    Object decodeNoHeader(byte[] data);
 }

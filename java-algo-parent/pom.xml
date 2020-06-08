@@ -8,7 +8,9 @@
     <artifactId>java-algo-parent</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
-
+    <properties>
+        <revision>1.0-SNAPSHOT</revision>
+    </properties>
     <distributionManagement>
         <snapshotRepository>
             <id>ossrh</id>

@@ -16,11 +16,11 @@ public abstract class BaseEncoder {
 
         stream.write(VERSION);
         stream.write(FOOTER_LENGTH);
-        stream.write(getEncodingType());
         if (isEncoded)
             stream.write(DATA_TYPE_ENCODED);
         else
             stream.write(DATA_TYPE_RAW);
+        stream.write(getEncodingType());
         stream.write(UNUSED);
         stream.write(UNUSED);
         for (char c : MAGIC_NUMBER) {
@@ -30,12 +30,19 @@ public abstract class BaseEncoder {
     }
 
     public Header getInfo(byte[] data) {
-        int headeerEnd = ((int) data[1]);
-        byte[] headerBytes = Arrays.copyOfRange(data, 0, headeerEnd);
+        int headerEnd = ((int) data[1]);
+        if (headerEnd > data.length || headerEnd<1) {
+            return null;
+        }
+        byte[] headerBytes = Arrays.copyOfRange(data, 0, headerEnd);
+        String magicNumber = new String(Arrays.copyOfRange(headerBytes,headerBytes.length-MAGIC_NUMBER.length,headerBytes.length));
+        if(!magicNumber.equals(new String(MAGIC_NUMBER))){
+            return null;
+        }
         Header header = new Header();
         header.setVersion((int) headerBytes[0]);
-        header.setEncodingType((int) headerBytes[2]);
-        header.setEncoded((int) headerBytes[3] == 2);
+        header.setEncodingType((int) headerBytes[3]);
+        header.setEncoded((int) headerBytes[2] == 2);
         return header;
     }
 

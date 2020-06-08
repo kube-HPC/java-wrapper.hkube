@@ -2,13 +2,16 @@ package hkube.encoding;
 
 public class GeneralDecoder extends BaseEncoder {
 
-    public Object decodeNoHeader(byte[] data) {
+    private Object decodeNoHeader(byte[] data) {
         MSGPackEncoder encoder = new MSGPackEncoder();
         return encoder.decodeNoHeader(data);
     }
 
     public Object decode(byte[] data) {
         Header info = getInfo(data);
+        if(info == null){
+            return decodeNoHeader(data);
+        }
         if (!info.isEncoded()) {
             return removeHeader(data);
         } else {

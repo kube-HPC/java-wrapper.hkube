@@ -58,7 +58,7 @@ public class MSGPackEncoder extends BaseEncoder implements IEncoder {
     }
 
     @Override
-    public Map decode(byte[] data) {
+    public Object decode(byte[] data) {
 
         byte[] encodedData = removeHeader(data);
         Timing timing = new Timing(logger, "decode");
@@ -66,18 +66,18 @@ public class MSGPackEncoder extends BaseEncoder implements IEncoder {
         ObjectMapper objectMapper = new ObjectMapper(new MessagePackFactory());
         try {
 
-            return objectMapper.readValue(encodedData, HashMap.class);
+            return objectMapper.readValue(encodedData, Object.class);
         } catch (Throwable e) {
             return null;
         }
     }
     @Override
-    public Map decodeNoHeader(byte[] data) {
+    public Object decodeNoHeader(byte[] data) {
         Timing timing = new Timing(logger, "decode");
         timing.start();
         ObjectMapper objectMapper = new ObjectMapper(new MessagePackFactory());
         try {
-            return objectMapper.readValue(data, HashMap.class);
+            return objectMapper.readValue(data,Object.class);
         } catch (Throwable e) {
             return null;
         }

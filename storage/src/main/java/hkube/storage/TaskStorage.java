@@ -4,15 +4,16 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.List;
 
+
 public class TaskStorage extends BaseStorage {
     TaskStorage(ISimplePathStorage storage){
         super(storage);
     }
-    public void put(String jobId, String taskId, byte[] data) {
+    public void put(String jobId, String taskId, Object data) {
         super.put(createPath(jobId,taskId),data);
     }
 
-    public byte[] get(String jobId, String taskId) throws FileNotFoundException {
+    public Object get(String jobId, String taskId) throws FileNotFoundException {
         return super.get(createPath(jobId,taskId));
     }
 

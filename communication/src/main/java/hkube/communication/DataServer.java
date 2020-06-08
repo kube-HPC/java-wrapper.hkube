@@ -52,7 +52,7 @@ public class DataServer implements IRequestListener {
     @Override
     public void onRequest(byte[] request) {
         GeneralDecoder decoder = new GeneralDecoder();
-        Map requestInfo = (Map) decoder.decodeNoHeader(request);
+        Map requestInfo = (Map) decoder.decode(request);
         String taskId = (String) requestInfo.get("taskId");
         String path = (String) requestInfo.get("path");
         List<String> tasks = (List) requestInfo.get("tasks");

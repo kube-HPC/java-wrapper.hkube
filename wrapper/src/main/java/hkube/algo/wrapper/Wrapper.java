@@ -3,6 +3,12 @@ package hkube.algo.wrapper;
 import hkube.algo.CommandResponseListener;
 import hkube.algo.HKubeAPIImpl;
 import hkube.algo.ICommandSender;
+import hkube.communication.CommConfig;
+import hkube.communication.DataServer;
+import hkube.communication.zmq.ZMQServer;
+import hkube.storage.StorageConfig;
+import hkube.storage.StorageFactory;
+import hkube.storage.TaskStorage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.glassfish.tyrus.client.ClientManager;
@@ -23,6 +29,9 @@ public class Wrapper implements ICommandSender {
     JSONArray mInput;
     List<CommandResponseListener> listeners = new ArrayList<>();
     HKubeAPIImpl hkubeAPI = new HKubeAPIImpl(this);
+    ZMQServer zmqServer = new ZMQServer(new CommConfig());
+    DataServer dataServer = new DataServer(zmqServer);
+    TaskStorage taskResultStorage;
 
 
 
@@ -31,6 +40,7 @@ public class Wrapper implements ICommandSender {
     public Wrapper(IAlgorithm algorithm, WrapperConfig config) {
         mConfig = config;
         mAlgorithm = algorithm;
+        taskResultStorage = new StorageFactory(new StorageConfig()).getTaskStorage();
         connect();
     }
 
@@ -39,11 +49,12 @@ public class Wrapper implements ICommandSender {
     }
 
     private void connect() {
-        String uriString = "ws://" + mConfig.getHost() + ":" + mConfig.getPort();
+        String uriString = "ws://" + mConfig.getHost() + ":" + mConfig.getPort()+"/?storage="+mConfig.getStorageVersion()+"&encoding=" + mConfig.getStorageEncodingType();
         try {
             logger.info("connecting to uri: " + uriString);
 
             URI uri = new URI(uriString);
+
             WebSocketContainer container = ContainerProvider.getWebSocketContainer();
             ClientManager clientManager = (ClientManager) container;
             clientManager.getProperties().put("org.glassfish.tyrus.incomingBufferSize", 150000000);
@@ -56,7 +67,7 @@ public class Wrapper implements ICommandSender {
                 try {
                     container.connectToServer(this, uri);
                 } catch (Exception exc) {
-//                    logger.error(exc);
+                    logger.error(exc);
                 }
                 Thread.sleep(200);
             }
@@ -152,8 +163,19 @@ public class Wrapper implements ICommandSender {
                         case "start":
                             sendMessage("started", null);
                             try {
+                                DataAdapter dataAdapter = new DataAdapter();
+                                dataAdapter.placeData(mArgs);
                                 JSONObject res = mAlgorithm.Start(mInput,hkubeAPI);
-                                sendMessage("done", res);
+                                String taskId = (String)mArgs.get("taskId");
+                                dataServer.addTaskData(taskId,res);
+                                JSONObject discoveryData = new JSONObject();
+                                discoveryData.put("taskId",taskId);
+                                JSONObject discoveryComm = new JSONObject();
+                                discoveryComm.put("host","localhost");
+                                discoveryComm.put("port",new CommConfig().getListeningPort());
+                                sendMessage( "storing",discoveryComm );
+                                taskResultStorage.put((String) mArgs.get("jobId"),taskId,res);
+                                sendMessage("done",new JSONObject());
                             } catch (Exception ex) {
                                 logger.error(ex);
                                 Map<String, String> res = new HashMap<>();

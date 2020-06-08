@@ -20,12 +20,12 @@ public class Algorithm implements IAlgorithm {
         Map<String, Object> data = new HashMap<>();
         data.put("myAnswer", 33);
         data.put("mirror", input);
-        JSONObject result =  hkubeAPI.startAlgorithm("green-alg",new JSONArray(),false);
+      //  JSONObject result =  hkubeAPI.startAlgorithm("green-alg",new JSONArray(),false);
         JSONObject simpleInput = new JSONObject();
         Map files = new HashMap();
         files.put("link","mylink");
         simpleInput.put("files",files);
-        hkubeAPI.startStoredPipeLine("simple",simpleInput);
+      //  hkubeAPI.startStoredPipeLine("simple",simpleInput);
         INode node = new INode() {
             @Override
             public String getName() {
@@ -41,7 +41,6 @@ public class Algorithm implements IAlgorithm {
             public void setInput(JSONObject[] input) {
 
             }
-
             @Override
             public String getAlgorithmName() {
                 return "yellow-alg";
@@ -53,8 +52,9 @@ public class Algorithm implements IAlgorithm {
             }
         };
         INode[] nodes ={node};
-        hkubeAPI.startRawSubPipeLine("myRow",nodes,new JSONObject(),new HashMap(),new HashMap());
-        return new JSONObject(result);
+      //  hkubeAPI.startRawSubPipeLine("myRow",nodes,new JSONObject(),new HashMap(),new HashMap());
+        //return new JSONObject(result);
+        return simpleInput;
     }
 
     @Override
