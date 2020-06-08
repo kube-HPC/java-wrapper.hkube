@@ -1,16 +1,13 @@
 package hkube.storage;
 
-import hkube.storage.ISimplePathStorage;
-import hkube.storage.StorageConfig;
-import hkube.storage.StorageFactory;
-import hkube.storage.TaskStorage;
+
 import org.junit.Test;
 
 import java.io.FileNotFoundException;
 
 public class StorageTest {
 
-    StorageConfig config = new StorageConfig() {
+    IStorageConfig config = new StorageConfig() {
         @Override
         public String getStorageType() {
             return "test";

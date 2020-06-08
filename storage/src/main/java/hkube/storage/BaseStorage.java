@@ -9,12 +9,14 @@ import hkube.encoding.MSGPackEncoder;
 
 public abstract class BaseStorage {
     ISimplePathStorage adapter;
-    StorageConfig config = new StorageConfig();
-    String rootName = config.getClusterName() + "-" + getRootPrefix();
+    IStorageConfig config;
+    String rootName;
     MSGPackEncoder encoder = new MSGPackEncoder();
     GeneralDecoder decoder = new GeneralDecoder();
-    BaseStorage(ISimplePathStorage storage) {
+    BaseStorage(ISimplePathStorage storage ,IStorageConfig config) {
         this.adapter = storage;
+        this.config = config;
+        rootName = config.getClusterName() + "-" + getRootPrefix();
     }
 
     void put(String path, Object data) {

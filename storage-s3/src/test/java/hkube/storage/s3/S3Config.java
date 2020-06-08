@@ -2,7 +2,7 @@ package hkube.storage.s3;
 
 import hkube.utils.Config;
 
-public class S3Config extends Config {
+public class S3Config extends Config implements IS3Config {
     String accessKeyId = System.getenv("AWS_ACCESS_KEY_ID");
 
     public String getAccessKeyId() {

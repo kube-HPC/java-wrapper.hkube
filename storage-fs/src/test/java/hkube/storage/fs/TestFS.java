@@ -1,6 +1,8 @@
 package hkube.storage.fs;
 
 import hkube.storage.ISimplePathStorage;
+import hkube.storage.IStorageConfig;
+import hkube.utils.Config;
 import org.junit.After;
 import org.junit.Test;
 import java.io.File;
@@ -20,7 +22,8 @@ public class TestFS {
 
     @Test
     public void testPutGet() throws FileNotFoundException {
-        ISimplePathStorage adapter = new FSAdapter(config);
+        ISimplePathStorage adapter = new FSAdapter();
+        adapter.setConfig(storageConfig);
         adapter.put("dir1" + File.separator + "dir2" + File.separator + "Stam", "Kloom".getBytes());
         String output = new String(adapter.get("dir1" + File.separator + "dir2" + File.separator + "Stam"));
         assert output.equals("Kloom");
@@ -28,7 +31,8 @@ public class TestFS {
 
     @Test
     public void testList() throws FileNotFoundException {
-        ISimplePathStorage adapter = new FSAdapter(config);
+        ISimplePathStorage adapter = new FSAdapter();
+        adapter.setConfig(storageConfig);
         adapter.put("dir1" + File.separator + "dir2" + File.separator + "Stam", "Kloom".getBytes());
         adapter.put("dir1" + File.separator + "dir3" + File.separator + "Stam", "Kloom".getBytes());
         List dirContent = adapter.list("dir1");
@@ -41,8 +45,25 @@ public class TestFS {
     public void notFoundException() {
         assertThrows(FileNotFoundException.class, () -> {
 
-            ISimplePathStorage adapter = new FSAdapter(new FSConfig());
+            ISimplePathStorage adapter =new FSAdapter();
+            adapter.setConfig(storageConfig);
             adapter.get("dir1" + File.separator + "dir2" + File.separator + "Ain");
         });
     }
+    IStorageConfig storageConfig = new IStorageConfig() {
+        @Override
+        public String getStorageType() {
+            return null;
+        }
+
+        @Override
+        public String getClusterName() {
+            return null;
+        }
+
+        @Override
+        public Config getTypeSpecificConfig() {
+            return config;
+        }
+    };
 }

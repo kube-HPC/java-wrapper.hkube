@@ -36,7 +36,7 @@ public class TestDataCommunication {
     public void getDataOldTaskId() throws IOException, URISyntaxException, TimeoutException {
         CommConfig conf = new CommConfig();
         server = new ZMQServer(conf);
-        DataServer ds = new DataServer(server);
+        DataServer ds = new DataServer(server,conf);
         JSONObject data1 = parseJSON("data1.json");
         ds.addTaskData("taskId1",data1);
         ZMQRequest zmqr = new ZMQRequest("localhost", conf.getListeningPort(), conf);

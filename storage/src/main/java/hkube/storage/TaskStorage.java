@@ -6,8 +6,8 @@ import java.util.List;
 
 
 public class TaskStorage extends BaseStorage {
-    TaskStorage(ISimplePathStorage storage){
-        super(storage);
+    TaskStorage(ISimplePathStorage storage,IStorageConfig config){
+        super(storage,config);
     }
     public void put(String jobId, String taskId, Object data) {
         super.put(createPath(jobId,taskId),data);

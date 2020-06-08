@@ -1,6 +1,9 @@
 package hkube.storage.fs;
 
 import hkube.storage.ISimplePathStorage;
+import hkube.storage.IStorageConfig;
+
+
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,19 +14,11 @@ import java.util.stream.Stream;
 
 public class FSAdapter implements ISimplePathStorage {
     public static ISimplePathStorage getInstance(){
-        return new FSAdapter(new FSConfig());
+        return new FSAdapter();
     }
     File basePath;
-    public FSAdapter(FSConfig config) {
-        String basePathStr = config.getBaseDir();
-        if (basePathStr != null) {
-            basePath = new File(basePathStr);
-            if (!basePath.isDirectory()) {
-                basePath.mkdir();
-            }
-        } else {
-            throw new RuntimeException("missing baseDirectory configuration parameter");
-        }
+    public FSAdapter() {
+
     }
 
     public void put(String path, byte[] data) {
@@ -64,6 +59,20 @@ public class FSAdapter implements ISimplePathStorage {
     public void delete(String path) {
         File file = new File(basePath.getAbsoluteFile() + File.separator + path);
         file.delete();
+    }
+
+    @Override
+    public void setConfig(IStorageConfig config) {
+        IFSConfig fsConfig = (IFSConfig) config.getTypeSpecificConfig();
+        String basePathStr = fsConfig.getBaseDir();
+        if (basePathStr != null) {
+            basePath = new File(basePathStr);
+            if (!basePath.isDirectory()) {
+                basePath.mkdir();
+            }
+        } else {
+            throw new RuntimeException("missing baseDirectory configuration parameter");
+        }
     }
 
     public List<String> list(String path) {

@@ -38,11 +38,12 @@ public class DataServer implements IRequestListener {
     }
 
     DataCache dataCache = new DataCache();
-    CommConfig conf = new CommConfig();
+    ICommConfig conf;
 
-    public DataServer(IRequestServer communication) {
+    public DataServer(IRequestServer communication,ICommConfig conf) {
         communication.addRequestsListener(this);
         this.communication = communication;
+        this.conf = conf;
     }
 
     public void addTaskData(String taskId, Object data) {

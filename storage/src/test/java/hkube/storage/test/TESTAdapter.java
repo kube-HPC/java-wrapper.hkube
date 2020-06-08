@@ -1,6 +1,8 @@
 package hkube.storage.test;
 
 import hkube.storage.ISimplePathStorage;
+import hkube.storage.IStorageConfig;
+
 
 import java.io.FileNotFoundException;
 import java.util.HashMap;
@@ -29,6 +31,11 @@ public class TESTAdapter implements ISimplePathStorage {
 
     @Override
     public void delete(String path) {
+
+    }
+
+    @Override
+    public void setConfig(IStorageConfig config) {
 
     }
 }

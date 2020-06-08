@@ -1,9 +1,7 @@
 package hkube.algo.wrapper;
 
 
-import hkube.communication.CommConfig;
 import hkube.encoding.GeneralDecoder;
-import hkube.storage.StorageConfig;
 import hkube.storage.StorageFactory;
 import hkube.storage.TaskStorage;
 import org.apache.commons.lang3.StringUtils;
@@ -16,7 +14,16 @@ import java.util.*;
 import java.util.concurrent.TimeoutException;
 
 public class DataAdapter {
+    WrapperConfig config;
 
+    TaskStorage taskStorage;
+    StorageProxy storageProxy;
+
+    public DataAdapter(WrapperConfig config) {
+        this.config = config;
+        taskStorage = new StorageFactory(config.storageConfig).getTaskStorage();
+        storageProxy = new StorageProxy(taskStorage);
+    }
 
     GeneralDecoder decoder = new GeneralDecoder();
 
@@ -38,9 +45,6 @@ public class DataAdapter {
         }
     }
 
-    TaskStorage taskStorage = new StorageFactory(new StorageConfig()).getTaskStorage();
-    StorageProxy storageProxy = new StorageProxy(taskStorage);
-
     public void placeData(JSONObject args) {
         JSONObject storage = (JSONObject) args.get("storage");
         Object flatInput = args.get("flatInput");
@@ -58,28 +62,25 @@ public class DataAdapter {
                 } else {
                     dataReference = dataReference.substring(2);
                     Object item = storage.get(dataReference);
-                    if (item instanceof JSONArray){
+                    if (item instanceof JSONArray) {
                         value = new ArrayList();
-                        Iterator batchIterator = ((JSONArray)item).iterator();
-                        while(batchIterator.hasNext()) {
+                        Iterator batchIterator = ((JSONArray) item).iterator();
+                        while (batchIterator.hasNext()) {
                             JSONObject single = (JSONObject) batchIterator.next();
                             String path = (String) single.get("path");
                             JSONObject discovery = (JSONObject) single.get("discovery");
-
-
                             JSONObject storageInfo = (JSONObject) single.get("storageInfo");
-                            ((List)value).add(getInputParamFromStorage(storageInfo, path));
+                            ((List) value).add(getInputParamFromStorage(storageInfo, path));
                         }
-                    }
-                    else{
-                        JSONObject single =(JSONObject) item;
+                    } else {
+                        JSONObject single = (JSONObject) item;
                         String path = (String) single.get("path");
-                        if(single.has("discovery")) {
+                        if (single.has("discovery")) {
                             JSONObject discovery = (JSONObject) single.get("discovery");
                             String host = (String) discovery.get("host");
                             String port = (String) discovery.get("port");
-                            ZMQRequest zmqr = new ZMQRequest(host, port, new CommConfig());
-                            DataRequest request = new DataRequest(zmqr, (String)single.get("taskId"), null, path);
+                            ZMQRequest zmqr = new ZMQRequest(host, port, config.commConfig);
+                            DataRequest request = new DataRequest(zmqr, (String) single.get("taskId"), null, path);
 
                             try {
                                 value = request.send();
@@ -87,7 +88,7 @@ public class DataAdapter {
 
                             }
                         }
-                        if(value == null) {
+                        if (value == null) {
                             JSONObject storageInfo = (JSONObject) single.get("storageInfo");
                             value = getInputParamFromStorage(storageInfo, path);
                         }

@@ -16,17 +16,16 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.*;
 import com.amazonaws.services.s3.AmazonS3;
 import hkube.storage.ISimplePathStorage;
+import hkube.storage.IStorageConfig;
 
 public class S3Adapter implements ISimplePathStorage {
     public static ISimplePathStorage getInstance(){
-        return new S3Adapter(new S3Config());
+        return new S3Adapter();
     }
     AmazonS3 conn;
 
-    S3Adapter(S3Config configuration) {
-        String accessKey = (String) configuration.getAccessKeyId();
-        String secretKey = (String) configuration.getSecretAccessKey();
-        init(accessKey, secretKey);
+    S3Adapter() {
+
     }
 
     public void init(String accessKey, String secretKey) {
@@ -75,6 +74,14 @@ public class S3Adapter implements ISimplePathStorage {
     @Override
     public void delete(String path) {
         conn.deleteObject(getBucket(path), getPathInBucket(path));
+    }
+
+    @Override
+    public void setConfig(IStorageConfig config) {
+        IS3Config s3Config = (IS3Config)config.getTypeSpecificConfig();
+        String accessKey =  s3Config.getAccessKeyId();
+        String secretKey =  s3Config.getSecretAccessKey();
+        init(accessKey, secretKey);
     }
 
     String getBucket(String completePath) {
