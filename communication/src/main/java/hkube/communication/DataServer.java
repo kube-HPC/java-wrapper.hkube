@@ -40,7 +40,7 @@ public class DataServer implements IRequestListener {
     DataCache dataCache = new DataCache();
     ICommConfig conf;
 
-    public DataServer(IRequestServer communication,ICommConfig conf) {
+    public DataServer(IRequestServer communication, ICommConfig conf) {
         communication.addRequestsListener(this);
         this.communication = communication;
         this.conf = conf;
@@ -57,8 +57,9 @@ public class DataServer implements IRequestListener {
         String taskId = (String) requestInfo.get("taskId");
         String path = (String) requestInfo.get("path");
         List<String> tasks = (List) requestInfo.get("tasks");
-
-        if (taskId != null) {
+        if (taskId == null && tasks == null) {
+            communication.reply(encoder.encode(createError("unknown", "Request must contain either task or tasks attribute")));
+        } else if (taskId != null) {
             communication.reply(encoder.encode(getResult(taskId, path)));
         } else {
             List items = tasks.stream().map((task) -> getResult(task, path)).collect(Collectors.toList());
@@ -81,7 +82,7 @@ public class DataServer implements IRequestListener {
             result = createError("notAvailable", "taskId notAvailable").toMap();
         } else {
 
-            if (path != null) {
+            if (path != null && !path.equals("")) {
                 if (data instanceof JSONObject) {
                     result = ((JSONObject) data).query("/" + path.replaceAll("\\.", "/"));
                 } else {

@@ -1,49 +1,30 @@
 package hkube.algo.wrapper;
 
 
-import hkube.encoding.GeneralDecoder;
 import hkube.storage.StorageFactory;
 import hkube.storage.TaskStorage;
-import org.apache.commons.lang3.StringUtils;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import hkube.communication.zmq.ZMQRequest;
 import hkube.communication.DataRequest;
-import java.io.FileNotFoundException;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 public class DataAdapter {
     WrapperConfig config;
-
     TaskStorage taskStorage;
     StorageProxy storageProxy;
-
+    private static final Logger logger = LogManager.getLogger();
     public DataAdapter(WrapperConfig config) {
         this.config = config;
         taskStorage = new StorageFactory(config.storageConfig).getTaskStorage();
         storageProxy = new StorageProxy(taskStorage);
     }
 
-    GeneralDecoder decoder = new GeneralDecoder();
-
-    class StorageProxy {
-        HashMap cache = new HashMap();
-        TaskStorage storage;
-
-        StorageProxy(TaskStorage storage) {
-            this.storage = storage;
-        }
-
-        Object get(String path) throws FileNotFoundException {
-            Object result = cache.get(path);
-            if (result == null) {
-                result = storage.getByFullPath(path);
-                cache.put(path, result);
-            }
-            return result;
-        }
-    }
 
     public void placeData(JSONObject args) {
         JSONObject storage = (JSONObject) args.get("storage");
@@ -51,10 +32,10 @@ public class DataAdapter {
 
         if (flatInput instanceof JSONObject) {
             Iterator<Map.Entry<String, Object>> iterator = ((JSONObject) flatInput).toMap().entrySet().iterator();
-            Map results = new HashMap<>();
+            Map<String, Object> results = new HashMap<>();
             while (iterator.hasNext()) {
                 Object value = null;
-                Map.Entry entry = iterator.next();
+                Map.Entry<String,Object> entry = iterator.next();
                 String dataReference = (String) entry.getValue();
                 if (!dataReference.startsWith("$$")) {
                     value = dataReference;
@@ -69,8 +50,22 @@ public class DataAdapter {
                             JSONObject single = (JSONObject) batchIterator.next();
                             String path = (String) single.get("path");
                             JSONObject discovery = (JSONObject) single.get("discovery");
-                            JSONObject storageInfo = (JSONObject) single.get("storageInfo");
-                            ((List) value).add(getInputParamFromStorage(storageInfo, path));
+                            if (single.has("storageInfo")) {
+                                JSONObject storageInfo = (JSONObject) single.get("storageInfo");
+                                ((List) value).add(storageProxy.getInputParamFromStorage(storageInfo, path));
+                            } else {
+                                String host = (String) discovery.get("host");
+                                String port = (String) discovery.get("port");
+                                ZMQRequest zmqr = new ZMQRequest(host, port, config.commConfig);
+                                List<String> tasks = getStringListFromJSONArray((JSONArray) single.get("tasks"));
+                                DataRequest request = new DataRequest(zmqr, null, tasks, path);
+                                try {
+                                    value = request.send();
+                                } catch (TimeoutException e) {
+                                    String jobId = (String) args.get("jobId");
+                                    value = tasks.stream().map((task) -> storageProxy.getInputParamFromStorage(jobId, task, path)).collect(Collectors.toList());
+                                }
+                            }
                         }
                     } else {
                         JSONObject single = (JSONObject) item;
@@ -81,16 +76,15 @@ public class DataAdapter {
                             String port = (String) discovery.get("port");
                             ZMQRequest zmqr = new ZMQRequest(host, port, config.commConfig);
                             DataRequest request = new DataRequest(zmqr, (String) single.get("taskId"), null, path);
-
                             try {
                                 value = request.send();
                             } catch (TimeoutException e) {
-
+                                logger.warn("Timeout trying to get output from " + host+":"+port);
                             }
                         }
                         if (value == null) {
                             JSONObject storageInfo = (JSONObject) single.get("storageInfo");
-                            value = getInputParamFromStorage(storageInfo, path);
+                            value = storageProxy.getInputParamFromStorage(storageInfo, path);
                         }
                     }
                     results.put(entry.getKey(), value);
@@ -99,37 +93,28 @@ public class DataAdapter {
             args.put("input", results);
         }
     }
+    JSONObject wrapResult(WrapperConfig config,String jobId, String taskId){
+        JSONObject wrappedResult = new JSONObject();
+        JSONObject storageInfo = new JSONObject();
+        String fullPath = new StorageFactory(config.storageConfig).getTaskStorage().createFullPath(taskId,jobId);
+        storageInfo.put("path",fullPath);
+        storageInfo.put("metadata",new HashMap());
+        JSONObject discoveryComm = new JSONObject();
+        discoveryComm.put("host",config.commConfig.getListeningHost());
+        discoveryComm.put("port", config.commConfig.getListeningPort());
+        wrappedResult.put("discovery",discoveryComm);
+        wrappedResult.put("storageInfo",storageInfo);
+        wrappedResult.put("taskId",taskId);
+        return wrappedResult;
+    }
 
-    Object getInputParamFromStorage(JSONObject storageInfo, String path) {
-        String storageFullPath = (String) storageInfo.get("path");
-        Object value;
-        try {
-            Object storedData = storageProxy.get(storageFullPath);
-            if (storedData instanceof Map) {
-                JSONObject storedDataJson = new JSONObject((Map) storedData);
-
-                if (path.length() > 0) {
-                    String[] strArray = path.split("\\.");
-                    String lastToken = strArray[strArray.length - 1];
-                    Integer index = null;
-                    if (StringUtils.isNumeric(lastToken)) {
-                        index = Integer.valueOf(lastToken);
-                        path = path.replace("." + lastToken, "");
-                    }
-                    value = storedDataJson.query("/" + path.replaceAll("\\.", "/"));
-                    if (index != null) {
-                        value = ((JSONArray) value).get(index);
-                    }
-                } else {
-                    value = storedDataJson;
-                }
-            } else {
-                value = storedData;
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-            value = null;
-        }
-        return value;
+    public static List<String> getStringListFromJSONArray(JSONArray array) {
+        ArrayList<String> jsonObjects = new ArrayList<>();
+        for (int i = 0;
+             i < (array != null ? array.length() : 0);
+             jsonObjects.add(array.getString(i++))
+        )
+            ;
+        return jsonObjects;
     }
 }

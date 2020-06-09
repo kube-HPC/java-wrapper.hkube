@@ -46,8 +46,11 @@ public class WrapperConfig extends Config {
         public String getListeningPort() {
             return getStrEnvValue("DISCOVERY_PORT", "9020");
         }
-
+        public String getListeningHost() {
+            return getStrEnvValue("POD_NAME", "127.0.0.1");
+        }
         public Integer getTimeout() {
+
             return getNumericEnvValue("TIMEOUT", 20000);
         }
     }

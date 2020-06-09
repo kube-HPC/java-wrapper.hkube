@@ -28,10 +28,9 @@ public class Wrapper implements ICommandSender {
     JSONArray mInput;
     List<CommandResponseListener> listeners = new ArrayList<>();
     HKubeAPIImpl hkubeAPI = new HKubeAPIImpl(this);
-    ZMQServer zmqServer ;
+    ZMQServer zmqServer;
     DataServer dataServer;
     TaskStorage taskResultStorage;
-
 
 
     private static final Logger logger = LogManager.getLogger();
@@ -39,7 +38,7 @@ public class Wrapper implements ICommandSender {
     public Wrapper(IAlgorithm algorithm, WrapperConfig config) {
         mConfig = config;
         zmqServer = new ZMQServer(mConfig.commConfig);
-        dataServer= new DataServer(zmqServer,mConfig.commConfig);
+        dataServer = new DataServer(zmqServer, mConfig.commConfig);
         mAlgorithm = algorithm;
         taskResultStorage = new StorageFactory(config.storageConfig).getTaskStorage();
         connect();
@@ -50,7 +49,7 @@ public class Wrapper implements ICommandSender {
     }
 
     private void connect() {
-        String uriString = "ws://" + mConfig.getHost() + ":" + mConfig.getPort()+"/?storage="+mConfig.getStorageVersion()+"&encoding=" + mConfig.getStorageEncodingType();
+        String uriString = "ws://" + mConfig.getHost() + ":" + mConfig.getPort() + "/?storage=" + mConfig.getStorageVersion() + "&encoding=" + mConfig.getStorageEncodingType();
         try {
             logger.info("connecting to uri: " + uriString);
 
@@ -84,7 +83,7 @@ public class Wrapper implements ICommandSender {
      */
     @OnOpen
     public void onOpen(Session userSession) {
-        logger.info("opening websocket");
+        logger.info("connected to worker");
         this.userSession = userSession;
         this.userSession.setMaxIdleTimeout(Long.MAX_VALUE);
     }
@@ -166,19 +165,16 @@ public class Wrapper implements ICommandSender {
                             try {
                                 DataAdapter dataAdapter = new DataAdapter(mConfig);
                                 dataAdapter.placeData(mArgs);
-                                JSONObject res = mAlgorithm.Start(mInput,hkubeAPI);
-                                String taskId = (String)mArgs.get("taskId");
-                                dataServer.addTaskData(taskId,res);
-                                JSONObject discoveryData = new JSONObject();
-                                discoveryData.put("taskId",taskId);
-                                JSONObject discoveryComm = new JSONObject();
-                                discoveryComm.put("host","localhost");
-                                discoveryComm.put("port", mConfig.commConfig.getListeningPort());
-                                sendMessage( "storing",discoveryComm );
-                                taskResultStorage.put((String) mArgs.get("jobId"),taskId,res);
-                                sendMessage("done",new JSONObject());
+                                JSONObject res = mAlgorithm.Start(mInput, hkubeAPI);
+                                String taskId = (String) mArgs.get("taskId");
+                                String jobId = (String) mArgs.get("jobId");
+                                dataServer.addTaskData(taskId, res);
+                                JSONObject results = dataAdapter.wrapResult(mConfig, jobId, taskId);
+                                sendMessage("storing", results);
+                                taskResultStorage.put((String) mArgs.get("jobId"), taskId, res);
+                                sendMessage("done", new JSONObject());
                             } catch (Exception ex) {
-                                logger.error(ex);
+                                logger.error("unexpected exception", ex);
                                 Map<String, String> res = new HashMap<>();
                                 res.put("code", "Failed");
                                 res.put("message", ex.toString());
