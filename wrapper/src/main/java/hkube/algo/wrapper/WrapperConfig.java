@@ -3,13 +3,10 @@ package hkube.algo.wrapper;
 import hkube.communication.ICommConfig;
 import hkube.storage.IStorageConfig;
 import hkube.storage.fs.IFSConfig;
+import hkube.storage.s3.IS3Config;
 import hkube.utils.Config;
 
 public class WrapperConfig extends Config {
-    String port;
-    String host;
-    String algorithmClassName;
-
     public String getPort() {
         return getStrEnvValue("WORKER_SOCKET_PORT", "3000");
     }
@@ -38,14 +35,18 @@ public class WrapperConfig extends Config {
         public String getListeningPort() {
             return getStrEnvValue("DISCOVERY_PORT", "9020");
         }
+
         public String getListeningHost() {
             return getStrEnvValue("POD_NAME", "127.0.0.1");
         }
-        public String getEncodingType() {  return getStrEnvValue("DISCOVERY_ENCODING", "msgpack"); }
+
+        public String getEncodingType() {
+            return getStrEnvValue("DISCOVERY_ENCODING", "msgpack");
+        }
 
         public Integer getTimeout() {
 
-            return getNumericEnvValue("TIMEOUT", 20000);
+            return getNumericEnvValue("DISCOVERY_TIMEOUT", 20000);
         }
     }
 
@@ -67,6 +68,7 @@ public class WrapperConfig extends Config {
                 return s3Config;
             }
         }
+
         public String getEncodingType() {
 
             return getStrEnvValue("STORAGE_ENCODING", "msgpack");
@@ -83,9 +85,7 @@ public class WrapperConfig extends Config {
 
     public FSConfig fsConfig = new FSConfig();
 
-    class S3Config extends Config {
-        String accessKeyId = System.getenv("AWS_ACCESS_KEY_ID");
-
+    class S3Config extends Config implements IS3Config {
         public String getAccessKeyId() {
             return getStrEnvValue("AWS_ACCESS_KEY_ID", "AKIAIOSFODNN7EXAMPLE");
         }

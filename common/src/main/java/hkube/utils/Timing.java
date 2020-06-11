@@ -39,7 +39,7 @@ public class Timing {
         if (endTime == 0 || startTime == 0) {
             return "Time not reported for " + name + " startime: " + startTime + " endtime: " + endTime;
         }
-        long duration = endTime = startTime;
+        long duration = endTime - startTime;
         return name + " took " + duration + " milliseconds";
     }
 }

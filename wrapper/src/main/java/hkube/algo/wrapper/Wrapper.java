@@ -5,7 +5,6 @@ import hkube.algo.HKubeAPIImpl;
 import hkube.algo.ICommandSender;
 import hkube.communication.DataServer;
 import hkube.communication.zmq.ZMQServer;
-import hkube.storage.IStorageConfig;
 import hkube.storage.StorageFactory;
 import hkube.storage.TaskStorage;
 import org.apache.logging.log4j.LogManager;
@@ -31,12 +30,14 @@ public class Wrapper implements ICommandSender {
     ZMQServer zmqServer;
     DataServer dataServer;
     TaskStorage taskResultStorage;
+    DataAdapter dataAdapter;
 
 
     private static final Logger logger = LogManager.getLogger();
 
     public Wrapper(IAlgorithm algorithm, WrapperConfig config) {
         mConfig = config;
+        dataAdapter = new DataAdapter(mConfig);
         zmqServer = new ZMQServer(mConfig.commConfig);
         dataServer = new DataServer(zmqServer, mConfig.commConfig);
         mAlgorithm = algorithm;
@@ -132,7 +133,6 @@ public class Wrapper implements ICommandSender {
     @OnMessage
     public void onMessage(String message) {
         try {
-//            logger.info("message: "+message);
             JSONObject msgAsJson = new JSONObject(message);
             String command = (String) msgAsJson.get("command");
             JSONObject data = msgAsJson.optJSONObject("data");
@@ -163,7 +163,6 @@ public class Wrapper implements ICommandSender {
                         case "start":
                             sendMessage("started", null);
                             try {
-                                DataAdapter dataAdapter = new DataAdapter(mConfig);
                                 dataAdapter.placeData(mArgs);
                                 JSONObject res = mAlgorithm.Start(mInput, hkubeAPI);
                                 String taskId = (String) mArgs.get("taskId");

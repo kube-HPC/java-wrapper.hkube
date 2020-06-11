@@ -31,6 +31,10 @@ public class DataAdapter {
 
 
     public void placeData(JSONObject args) {
+        Boolean useCache = args.getBoolean("useCache");
+        if(!useCache){
+            storageProxy.clear();
+        }
         JSONObject storage = (JSONObject) args.get("storage");
         Object flatInput = args.get("flatInput");
 
@@ -131,7 +135,7 @@ public class DataAdapter {
     JSONObject wrapResult(WrapperConfig config, String jobId, String taskId,Map metadata) {
         JSONObject wrappedResult = new JSONObject();
         JSONObject storageInfo = new JSONObject();
-        String fullPath = new StorageFactory(config.storageConfig).getTaskStorage().createFullPath(taskId, jobId);
+        String fullPath = new StorageFactory(config.storageConfig).getTaskStorage().createFullPath( jobId,taskId);
         storageInfo.put("path", fullPath);
         storageInfo.put("metadata",metadata);
         JSONObject discoveryComm = new JSONObject();

@@ -84,4 +84,8 @@ public class StorageProxy {
         }
         return value;
     }
+
+    public void clear() {
+        cache = new HashMap();
+    }
 }

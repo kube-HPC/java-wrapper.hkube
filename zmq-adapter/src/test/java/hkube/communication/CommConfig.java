@@ -14,7 +14,7 @@ public class CommConfig extends Config implements ICommConfig {
     }
     @Override
     public Integer getTimeout(){
-        return getNumericEnvValue("TIMEOUT",20000);
+        return getNumericEnvValue("DISCOVERY_TIMEOUT",1000);
     }
 
     @Override
