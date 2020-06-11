@@ -65,5 +65,10 @@ public class TestFS {
         public Config getTypeSpecificConfig() {
             return config;
         }
+
+        @Override
+        public String getEncodingType() {
+            return "msgpack";
+        }
     };
 }

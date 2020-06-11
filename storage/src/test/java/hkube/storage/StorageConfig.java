@@ -12,4 +12,9 @@ public class StorageConfig extends Config implements IStorageConfig {
     }
     public Config getTypeSpecificConfig(){return  null;}
 
+    @Override
+    public String getEncodingType() {
+        return "msgpack";
+    }
+
 }

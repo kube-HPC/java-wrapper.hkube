@@ -1,15 +1,18 @@
 package hkube.algo.wrapper;
 
 
+import hkube.encoding.IEncoder;
 import hkube.storage.StorageFactory;
 import hkube.storage.TaskStorage;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import hkube.communication.zmq.ZMQRequest;
 import hkube.communication.DataRequest;
+
 import java.util.*;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -19,6 +22,7 @@ public class DataAdapter {
     TaskStorage taskStorage;
     StorageProxy storageProxy;
     private static final Logger logger = LogManager.getLogger();
+
     public DataAdapter(WrapperConfig config) {
         this.config = config;
         taskStorage = new StorageFactory(config.storageConfig).getTaskStorage();
@@ -35,7 +39,7 @@ public class DataAdapter {
             Map<String, Object> results = new HashMap<>();
             while (iterator.hasNext()) {
                 Object value = null;
-                Map.Entry<String,Object> entry = iterator.next();
+                Map.Entry<String, Object> entry = iterator.next();
                 String dataReference = (String) entry.getValue();
                 if (!dataReference.startsWith("$$")) {
                     value = dataReference;
@@ -58,7 +62,7 @@ public class DataAdapter {
                                 String port = (String) discovery.get("port");
                                 ZMQRequest zmqr = new ZMQRequest(host, port, config.commConfig);
                                 List<String> tasks = getStringListFromJSONArray((JSONArray) single.get("tasks"));
-                                DataRequest request = new DataRequest(zmqr, null, tasks, path);
+                                DataRequest request = new DataRequest(zmqr, null, tasks, path, config.commConfig.getEncodingType());
                                 try {
                                     value = request.send();
                                 } catch (TimeoutException e) {
@@ -75,11 +79,11 @@ public class DataAdapter {
                             String host = (String) discovery.get("host");
                             String port = (String) discovery.get("port");
                             ZMQRequest zmqr = new ZMQRequest(host, port, config.commConfig);
-                            DataRequest request = new DataRequest(zmqr, (String) single.get("taskId"), null, path);
+                            DataRequest request = new DataRequest(zmqr, (String) single.get("taskId"), null, path, config.commConfig.getEncodingType());
                             try {
                                 value = request.send();
                             } catch (TimeoutException e) {
-                                logger.warn("Timeout trying to get output from " + host+":"+port);
+                                logger.warn("Timeout trying to get output from " + host + ":" + port);
                             }
                         }
                         if (value == null) {
@@ -93,18 +97,49 @@ public class DataAdapter {
             args.put("input", results);
         }
     }
-    JSONObject wrapResult(WrapperConfig config,String jobId, String taskId){
+
+    Map getMetadata(JSONArray savePaths, JSONObject result){
+        Iterator<Object> pathsIterator = savePaths.iterator();
+        Map metadata = new HashMap();
+        while (pathsIterator.hasNext()) {
+            String path = (String) pathsIterator.next();
+            String nodeName = new StringTokenizer(path, ".").nextToken();
+            String relativePath = path.replaceFirst(nodeName , "");
+            relativePath =  relativePath.replaceAll("\\.", "/");
+            Object value = result.query(relativePath);
+
+            String type;
+            JSONObject meta = new JSONObject();
+            if (value instanceof Integer || value instanceof Long || value instanceof Double) {
+                type = "number";
+            }else if (value instanceof String) {
+                type = "string";
+            }else if (value instanceof JSONArray) {
+                type = "array";
+                meta.put("size",(((JSONArray) value).length()));
+            }
+            else{
+                type="object";
+            }
+
+            meta.put("type",type);
+            metadata.put(path,meta);
+        }
+        return metadata;
+    }
+
+    JSONObject wrapResult(WrapperConfig config, String jobId, String taskId,Map metadata) {
         JSONObject wrappedResult = new JSONObject();
         JSONObject storageInfo = new JSONObject();
-        String fullPath = new StorageFactory(config.storageConfig).getTaskStorage().createFullPath(taskId,jobId);
-        storageInfo.put("path",fullPath);
-        storageInfo.put("metadata",new HashMap());
+        String fullPath = new StorageFactory(config.storageConfig).getTaskStorage().createFullPath(taskId, jobId);
+        storageInfo.put("path", fullPath);
+        storageInfo.put("metadata",metadata);
         JSONObject discoveryComm = new JSONObject();
-        discoveryComm.put("host",config.commConfig.getListeningHost());
+        discoveryComm.put("host", config.commConfig.getListeningHost());
         discoveryComm.put("port", config.commConfig.getListeningPort());
-        wrappedResult.put("discovery",discoveryComm);
-        wrappedResult.put("storageInfo",storageInfo);
-        wrappedResult.put("taskId",taskId);
+        wrappedResult.put("discovery", discoveryComm);
+        wrappedResult.put("storageInfo", storageInfo);
+        wrappedResult.put("taskId", taskId);
         return wrappedResult;
     }
 

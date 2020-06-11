@@ -6,4 +6,5 @@ public interface IStorageConfig {
     public String getStorageType();
     public String getClusterName();
     public Config getTypeSpecificConfig();
+    public String getEncodingType();
 }

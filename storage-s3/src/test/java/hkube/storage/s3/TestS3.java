@@ -105,5 +105,10 @@ public class TestS3 {
         public Config getTypeSpecificConfig() {
             return config;
         }
+
+        @Override
+        public String getEncodingType() {
+            return "msgpack";
+        }
     };
 }

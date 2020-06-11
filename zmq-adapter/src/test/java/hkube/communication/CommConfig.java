@@ -21,4 +21,9 @@ public class CommConfig extends Config implements ICommConfig {
     public String getListeningHost() {
         return "localhost";
     }
+
+    @Override
+    public String getEncodingType() {
+        return "msgpack";
+    }
 }

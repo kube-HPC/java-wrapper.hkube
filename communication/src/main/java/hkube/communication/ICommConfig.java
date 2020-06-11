@@ -5,4 +5,5 @@ public interface ICommConfig {
     public String getListeningPort();
     public Integer getTimeout();
     public String getListeningHost();
+    public String getEncodingType();
 }

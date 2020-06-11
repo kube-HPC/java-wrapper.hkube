@@ -4,18 +4,19 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.List;
 
-import hkube.encoding.GeneralDecoder;
-import hkube.encoding.MSGPackEncoder;
+import hkube.encoding.EncodingManager;
+import hkube.encoding.IEncoder;
 
 public abstract class BaseStorage {
     ISimplePathStorage adapter;
     IStorageConfig config;
     String rootName;
-    MSGPackEncoder encoder = new MSGPackEncoder();
-    GeneralDecoder decoder = new GeneralDecoder();
+
+    IEncoder encoder;
     BaseStorage(ISimplePathStorage storage ,IStorageConfig config) {
         this.adapter = storage;
         this.config = config;
+        encoder = new EncodingManager(config.getEncodingType());
         rootName = config.getClusterName() + "-" + getRootPrefix();
     }
 
@@ -26,11 +27,11 @@ public abstract class BaseStorage {
 
    Object get(String path) throws FileNotFoundException {
         byte[] encoded=  adapter.get(enhancePath(path));
-        return decoder.decode(encoded);
+        return encoder.decode(encoded);
     }
     public Object getByFullPath(String path) throws FileNotFoundException{
         byte[] encoded = adapter.get(path);
-        return decoder.decode(encoded);
+        return encoder.decode(encoded);
     }
 
     List<String> list(String path) {

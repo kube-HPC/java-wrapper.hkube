@@ -7,8 +7,6 @@ import org.apache.logging.log4j.Logger;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-import java.util.HashMap;
-import java.util.Map;
 
 import hkube.utils.Timing;
 

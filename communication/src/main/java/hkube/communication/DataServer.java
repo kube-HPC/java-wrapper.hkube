@@ -1,6 +1,7 @@
 package hkube.communication;
 
-import hkube.encoding.GeneralDecoder;
+import hkube.encoding.EncodingManager;
+import hkube.encoding.IEncoder;
 import hkube.encoding.MSGPackEncoder;
 import org.json.JSONObject;
 
@@ -10,7 +11,7 @@ import java.util.stream.Collectors;
 public class DataServer implements IRequestListener {
 
     IRequestServer communication;
-    MSGPackEncoder encoder = new MSGPackEncoder();
+    IEncoder encoder;
 
     private class DataCache {
         Map<String, Object> dataByTaskIdMap = new HashMap();
@@ -42,6 +43,7 @@ public class DataServer implements IRequestListener {
 
     public DataServer(IRequestServer communication, ICommConfig conf) {
         communication.addRequestsListener(this);
+        encoder = new EncodingManager(conf.getEncodingType());
         this.communication = communication;
         this.conf = conf;
     }
@@ -52,15 +54,14 @@ public class DataServer implements IRequestListener {
 
     @Override
     public void onRequest(byte[] request) {
-        GeneralDecoder decoder = new GeneralDecoder();
-        Map requestInfo = (Map) decoder.decode(request);
+        Map requestInfo = (Map) encoder.decode(request);
         String taskId = (String) requestInfo.get("taskId");
         String path = (String) requestInfo.get("path");
         List<String> tasks = (List) requestInfo.get("tasks");
         if (taskId == null && tasks == null) {
-            communication.reply(encoder.encode(createError("unknown", "Request must contain either task or tasks attribute")));
+            communication.reply(this.encoder.encode(createError("unknown", "Request must contain either task or tasks attribute")));
         } else if (taskId != null) {
-            communication.reply(encoder.encode(getResult(taskId, path)));
+            communication.reply(this.encoder.encode(getResult(taskId, path)));
         } else {
             List items = tasks.stream().map((task) -> getResult(task, path)).collect(Collectors.toList());
             boolean hasError = items.stream().anyMatch(item -> {
@@ -71,7 +72,7 @@ public class DataServer implements IRequestListener {
             JSONObject result = new JSONObject();
             result.put("items", items);
             result.put("errors", hasError);
-            communication.reply(encoder.encode(result.toMap()));
+            communication.reply(this.encoder.encode(result.toMap()));
         }
     }
 

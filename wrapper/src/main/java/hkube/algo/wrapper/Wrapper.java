@@ -49,7 +49,7 @@ public class Wrapper implements ICommandSender {
     }
 
     private void connect() {
-        String uriString = "ws://" + mConfig.getHost() + ":" + mConfig.getPort() + "/?storage=" + mConfig.getStorageVersion() + "&encoding=" + mConfig.getStorageEncodingType();
+        String uriString = "ws://" + mConfig.getHost() + ":" + mConfig.getPort() + "/?storage=" + mConfig.getStorageVersion() + "&encoding=" + mConfig.getEncodingType();
         try {
             logger.info("connecting to uri: " + uriString);
 
@@ -169,8 +169,10 @@ public class Wrapper implements ICommandSender {
                                 String taskId = (String) mArgs.get("taskId");
                                 String jobId = (String) mArgs.get("jobId");
                                 dataServer.addTaskData(taskId, res);
-                                JSONObject results = dataAdapter.wrapResult(mConfig, jobId, taskId);
-                                sendMessage("storing", results);
+                                JSONArray savePaths = (JSONArray) ((JSONObject) mArgs.get("info")).get("savePaths");
+                                Map metaData =  dataAdapter.getMetadata(savePaths,res);
+                                JSONObject resultStoringData = dataAdapter.wrapResult(mConfig, jobId, taskId,metaData);
+                                sendMessage("storing", resultStoringData);
                                 taskResultStorage.put((String) mArgs.get("jobId"), taskId, res);
                                 sendMessage("done", new JSONObject());
                             } catch (Exception ex) {
@@ -203,6 +205,6 @@ public class Wrapper implements ICommandSender {
     }
 
     private void onExit() {
-
+        logger.warn("exiting");
     }
 }

@@ -1,6 +1,6 @@
 package hkube.communication;
 
-import hkube.encoding.GeneralDecoder;
+import hkube.encoding.EncodingManager;
 import hkube.encoding.MSGPackEncoder;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -15,11 +15,10 @@ public class DataRequest {
     String taskId;
     List tasks;
     String path;
-    GeneralDecoder decoder = new GeneralDecoder();
-    MSGPackEncoder encoder = new MSGPackEncoder();
+    EncodingManager encoder;
 
-
-    public DataRequest(IRequest requestAdapter, String taskId, List tasks, String path) {
+    public DataRequest(IRequest requestAdapter, String taskId, List tasks, String path,String encoding) {
+        encoder  = new EncodingManager(encoding);
         this.requestAdapter = requestAdapter;
         this.taskId = taskId;
         this.tasks = tasks;
@@ -37,7 +36,7 @@ public class DataRequest {
         if(tasks != null){
             map.put("tasks",tasks);
         }
-        Object decoded =  decoder.decode(requestAdapter.send(encoder.encodeNoHeader(map)));
+        Object decoded =  encoder.decode(requestAdapter.send(encoder.encodeNoHeader(map)));
         return toJSON(decoded);
     }
     void close(){

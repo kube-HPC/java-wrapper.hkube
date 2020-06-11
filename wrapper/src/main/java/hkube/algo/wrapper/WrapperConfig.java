@@ -22,16 +22,8 @@ public class WrapperConfig extends Config {
         return getStrEnvValue("ALGORITHM_ENTRY_POINT", null);
     }
 
-    public String getStorageType() {
-        return getStrEnvValue("STORAGE_TYPE", "fs");
-    }
-
     public String getEncodingType() {
-        return "msgpack";
-    }
-
-    public String getStorageEncodingType() {
-        return "json";
+        return getStrEnvValue("WORKER_ALGORITHM_ENCODING", "json");
     }
 
     public String getStorageVersion() {
@@ -49,6 +41,8 @@ public class WrapperConfig extends Config {
         public String getListeningHost() {
             return getStrEnvValue("POD_NAME", "127.0.0.1");
         }
+        public String getEncodingType() {  return getStrEnvValue("DISCOVERY_ENCODING", "msgpack"); }
+
         public Integer getTimeout() {
 
             return getNumericEnvValue("TIMEOUT", 20000);
@@ -72,6 +66,10 @@ public class WrapperConfig extends Config {
             } else {
                 return s3Config;
             }
+        }
+        public String getEncodingType() {
+
+            return getStrEnvValue("STORAGE_ENCODING", "msgpack");
         }
     }
 
