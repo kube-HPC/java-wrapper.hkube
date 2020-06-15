@@ -1,6 +1,7 @@
 package hkube.algo.wrapper;
 
 
+import hkube.encoding.EncodingManager;
 import hkube.encoding.IEncoder;
 import hkube.storage.StorageFactory;
 import hkube.storage.TaskStorage;
@@ -30,27 +31,27 @@ public class DataAdapter {
     }
 
 
-    public void placeData(JSONObject args) {
+    public JSONArray placeData(JSONObject args) {
         Boolean useCache = args.getBoolean("useCache");
         if(!useCache){
             storageProxy.clear();
         }
         JSONObject storage = (JSONObject) args.get("storage");
         Object flatInput = args.get("flatInput");
-
-        if (flatInput instanceof JSONObject) {
+        Map<String, Object> results = new HashMap<>();
+        if (flatInput instanceof JSONObject && !((JSONObject) flatInput).isEmpty()) {
             Iterator<Map.Entry<String, Object>> iterator = ((JSONObject) flatInput).toMap().entrySet().iterator();
-            Map<String, Object> results = new HashMap<>();
+
             while (iterator.hasNext()) {
                 Object value = null;
                 Map.Entry<String, Object> entry = iterator.next();
-                String dataReference = (String) entry.getValue();
-                if (!dataReference.startsWith("$$")) {
+                Object dataReference = entry.getValue();
+                if (!(dataReference instanceof String) ||!((String)dataReference).startsWith("$$")) {
                     value = dataReference;
                     results.put(entry.getKey(), value);
                 } else {
-                    dataReference = dataReference.substring(2);
-                    Object item = storage.get(dataReference);
+                    dataReference = ((String)dataReference).substring(2);
+                    Object item = storage.get((String) dataReference);
                     if (item instanceof JSONArray) {
                         value = new ArrayList();
                         Iterator batchIterator = ((JSONArray) item).iterator();
@@ -69,10 +70,11 @@ public class DataAdapter {
                                 DataRequest request = new DataRequest(zmqr, null, tasks, path, config.commConfig.getEncodingType());
                                 try {
                                     value = request.send();
-                                } catch (TimeoutException e) {
+                                } catch (Throwable e) {
                                     String jobId = (String) args.get("jobId");
                                     value = tasks.stream().map((task) -> storageProxy.getInputParamFromStorage(jobId, task, path)).collect(Collectors.toList());
                                 }
+
                             }
                         }
                     } else {
@@ -88,6 +90,8 @@ public class DataAdapter {
                                 value = request.send();
                             } catch (TimeoutException e) {
                                 logger.warn("Timeout trying to get output from " + host + ":" + port);
+                            } catch (Throwable e) {
+                                logger.warn("Exception getting data from peer : " + e.getMessage());
                             }
                         }
                         if (value == null) {
@@ -99,7 +103,9 @@ public class DataAdapter {
                 }
             }
             args.put("input", results);
+            return new JSONArray( results.values()) ;
         }
+        return (JSONArray) args.get("input");
     }
 
     Map getMetadata(JSONArray savePaths, JSONObject result){
@@ -132,18 +138,28 @@ public class DataAdapter {
         return metadata;
     }
 
-    JSONObject wrapResult(WrapperConfig config, String jobId, String taskId,Map metadata) {
+    int  getEncodedSize(JSONObject toBeEncoded,String encodingType){
+        byte[] encodedBytes =  new EncodingManager(encodingType).encode(toBeEncoded.toMap());
+        return encodedBytes.length;
+    }
+
+    JSONObject wrapResult(WrapperConfig config, String jobId, String taskId,Map metadata,int size) {
         JSONObject wrappedResult = new JSONObject();
+
         JSONObject storageInfo = new JSONObject();
         String fullPath = new StorageFactory(config.storageConfig).getTaskStorage().createFullPath( jobId,taskId);
         storageInfo.put("path", fullPath);
-        storageInfo.put("metadata",metadata);
+        storageInfo.put("size",size);
+        wrappedResult.put("storageInfo", storageInfo);
+
         JSONObject discoveryComm = new JSONObject();
         discoveryComm.put("host", config.commConfig.getListeningHost());
         discoveryComm.put("port", config.commConfig.getListeningPort());
         wrappedResult.put("discovery", discoveryComm);
-        wrappedResult.put("storageInfo", storageInfo);
+
         wrappedResult.put("taskId", taskId);
+        wrappedResult.put("metadata",metadata);
+
         return wrappedResult;
     }
 

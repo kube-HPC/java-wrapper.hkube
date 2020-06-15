@@ -1,7 +1,9 @@
 package hkube.communication;
 
 import hkube.encoding.EncodingManager;
-import hkube.encoding.MSGPackEncoder;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -16,9 +18,10 @@ public class DataRequest {
     List tasks;
     String path;
     EncodingManager encoder;
+    private static final Logger logger = LogManager.getLogger();
 
-    public DataRequest(IRequest requestAdapter, String taskId, List tasks, String path,String encoding) {
-        encoder  = new EncodingManager(encoding);
+    public DataRequest(IRequest requestAdapter, String taskId, List tasks, String path, String encoding) {
+        encoder = new EncodingManager(encoding);
         this.requestAdapter = requestAdapter;
         this.taskId = taskId;
         this.tasks = tasks;
@@ -26,22 +29,33 @@ public class DataRequest {
     }
 
     public Object send() throws TimeoutException {
-        HashMap map = new HashMap() ;
-        if(taskId != null){
-            map.put("taskId",taskId);
+        HashMap map = new HashMap();
+        if (taskId != null) {
+            map.put("taskId", taskId);
         }
-        if(path != null){
-            map.put("path",path);
+        if (path != null) {
+            map.put("path", path);
         }
-        if(tasks != null){
-            map.put("tasks",tasks);
+        if (tasks != null) {
+            map.put("tasks", tasks);
         }
-        Object decoded =  encoder.decode(requestAdapter.send(encoder.encodeNoHeader(map)));
-        return toJSON(decoded);
+        Object decoded = encoder.decode(requestAdapter.send(encoder.encodeNoHeader(map)));
+        Object result = toJSON(decoded);
+        if (logger.isDebugEnabled()) {
+            logger.debug(result);
+        }
+        if (result instanceof JSONObject && ((JSONObject) result).has("hkube_error")) {
+            logger.warn( result.toString());
+            throw new RuntimeException(result.toString());
+        }
+
+        return result;
     }
-    void close(){
+
+    void close() {
         requestAdapter.close();
     }
+
     public Object toJSON(Object object) throws JSONException {
         if (object instanceof HashMap) {
             JSONObject json = new JSONObject();
@@ -56,8 +70,7 @@ public class DataRequest {
                 json.put(toJSON(value));
             }
             return json;
-        }
-        else {
+        } else {
             return object;
         }
     }

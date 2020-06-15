@@ -29,7 +29,7 @@ public class WrapperConfig extends Config {
 
     class CommConfig extends Config implements ICommConfig {
         public Integer getMaxCacheSize() {
-            return getNumericEnvValue("DISCOVERY_MAX_CACHE_SIZE", 3);
+            return getNumericEnvValue("DISCOVERY_MAX_CACHE_SIZE", 500);
         }
 
         public String getListeningPort() {
@@ -37,7 +37,7 @@ public class WrapperConfig extends Config {
         }
 
         public String getListeningHost() {
-            return getStrEnvValue("POD_NAME", "127.0.0.1");
+            return getStrEnvValue("POD_IP", "127.0.0.1");
         }
 
         public String getEncodingType() {

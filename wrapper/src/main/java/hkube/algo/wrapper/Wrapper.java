@@ -5,6 +5,7 @@ import hkube.algo.HKubeAPIImpl;
 import hkube.algo.ICommandSender;
 import hkube.communication.DataServer;
 import hkube.communication.zmq.ZMQServer;
+import hkube.encoding.EncodingManager;
 import hkube.storage.StorageFactory;
 import hkube.storage.TaskStorage;
 import org.apache.logging.log4j.LogManager;
@@ -122,6 +123,14 @@ public class Wrapper implements ICommandSender {
         JSONObject message = new JSONObject(toSend);
         this.userSession.getAsyncRemote().sendText(message.toString());
     }
+    public void sendError(String command, JSONObject data) {
+        logger.info("Sending message: " + command);
+        Map<String, Object> toSend = new HashMap<String, Object>();
+        toSend.put("command", command);
+        toSend.put("error", data);
+        JSONObject message = new JSONObject(toSend);
+        this.userSession.getAsyncRemote().sendText(message.toString());
+    }
 
 
     /**
@@ -163,23 +172,26 @@ public class Wrapper implements ICommandSender {
                         case "start":
                             sendMessage("started", null);
                             try {
-                                dataAdapter.placeData(mArgs);
+                                mInput = dataAdapter.placeData(mArgs);
+                                logger.debug("input data after decoding "+ mInput);
                                 JSONObject res = mAlgorithm.Start(mInput, hkubeAPI);
                                 String taskId = (String) mArgs.get("taskId");
                                 String jobId = (String) mArgs.get("jobId");
                                 dataServer.addTaskData(taskId, res);
                                 JSONArray savePaths = (JSONArray) ((JSONObject) mArgs.get("info")).get("savePaths");
                                 Map metaData =  dataAdapter.getMetadata(savePaths,res);
-                                JSONObject resultStoringData = dataAdapter.wrapResult(mConfig, jobId, taskId,metaData);
+                                int resEncodedSize = dataAdapter.getEncodedSize(res,mConfig.commConfig.getEncodingType());
+                                JSONObject resultStoringData = dataAdapter.wrapResult(mConfig, jobId, taskId,metaData,resEncodedSize);
+                                logger.debug("result storing data" + resultStoringData);
                                 sendMessage("storing", resultStoringData);
-                                taskResultStorage.put((String) mArgs.get("jobId"), taskId, res);
+                                taskResultStorage.put((String) mArgs.get("jobId"), taskId, res.toMap());
                                 sendMessage("done", new JSONObject());
                             } catch (Exception ex) {
                                 logger.error("unexpected exception", ex);
                                 Map<String, String> res = new HashMap<>();
                                 res.put("code", "Failed");
                                 res.put("message", ex.toString());
-                                sendMessage("error", new JSONObject(res));
+                                sendError("errorMessage", new JSONObject(res));
                             } finally {
                                 mArgs = new JSONObject();
                                 mInput = new JSONArray();
