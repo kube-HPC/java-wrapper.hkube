@@ -104,8 +104,8 @@ public class DataAdapter {
             }
         }
         if (value == null) {
-            JSONObject storageInfo = (JSONObject) single.get("storageInfo");
             if (single.has("storageInfo")) {
+                JSONObject storageInfo = (JSONObject) single.get("storageInfo");
                 value = storageProxy.getInputParamFromStorage(storageInfo, path);
             } else {
                 //batch without discovery
