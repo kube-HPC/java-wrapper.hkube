@@ -15,4 +15,6 @@ public interface IEncoder {
     public Object decode(byte[] data);
 
     Object decodeNoHeader(byte[] data);
+    public Integer getEncodingType();
+    public String getName();
 }

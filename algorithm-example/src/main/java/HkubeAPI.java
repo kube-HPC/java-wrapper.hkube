@@ -20,10 +20,13 @@ public class HkubeAPI implements IAlgorithm {
         Map<String, Object> data = new HashMap<>();
         data.put("myAnswer", 33);
         data.put("mirror", input);
-        JSONObject result =  hkubeAPI.startAlgorithm("green-alg",new JSONArray(),false);
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.put(0,data);
+        JSONObject result =  hkubeAPI.startAlgorithm("green-alg",jsonArray,false);
         JSONObject simpleInput = new JSONObject();
         Map files = new HashMap();
-        files.put("link","mylink");
+        files.put("link","thislink");
+        files.put("other","otherValue");
         simpleInput.put("files",files);
         JSONObject stroedResult =  hkubeAPI.startStoredPipeLine("simple",simpleInput);
         INode node = new INode() {

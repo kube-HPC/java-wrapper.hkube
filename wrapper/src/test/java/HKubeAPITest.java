@@ -20,7 +20,7 @@ public class HKubeAPITest {
             CommandResponseListener listener;
 
             @Override
-            public void sendMessage(String command, JSONObject data) {
+            public void sendMessage(String command, JSONObject data, boolean isError) {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -47,7 +47,7 @@ public class HKubeAPITest {
             CommandResponseListener listener;
 
             @Override
-            public void sendMessage(String command, JSONObject data) {
+            public void sendMessage(String command, JSONObject data, boolean isError) {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -73,7 +73,7 @@ public class HKubeAPITest {
             CommandResponseListener listener;
 
             @Override
-            public void sendMessage(String command, JSONObject data) {
+            public void sendMessage(String command, JSONObject data, boolean isError) {
                 if (command.equals(Consts.startRawSubPipeline)) {
                     new Thread(new Runnable() {
                         @Override

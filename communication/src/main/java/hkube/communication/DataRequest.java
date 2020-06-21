@@ -26,6 +26,9 @@ public class DataRequest {
         this.taskId = taskId;
         this.tasks = tasks;
         this.path = path;
+        if (taskId != null && tasks != null) {
+            logger.warn("DataRequest should contain either task or tasks, not both");
+        }
     }
 
     public Object send() throws TimeoutException {
@@ -45,7 +48,7 @@ public class DataRequest {
             logger.debug(result);
         }
         if (result instanceof JSONObject && ((JSONObject) result).has("hkube_error")) {
-            logger.warn( result.toString());
+            logger.warn(result.toString());
             throw new RuntimeException(result.toString());
         }
 

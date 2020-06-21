@@ -1,5 +1,7 @@
 package hkube.algo;
 
+import hkube.algo.wrapper.DataAdapter;
+import hkube.algo.wrapper.WrapperConfig;
 import hkube.api.IHKubeAPI;
 import hkube.api.INode;
 
@@ -17,6 +19,8 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
     int lastExcution = 0;
     ICommandSender commandSender;
     Map<String, APIExecutionFuture> executions = new HashMap();
+    WrapperConfig config = new WrapperConfig();
+    DataAdapter dataAdapter = new DataAdapter(config);
 
     public HKubeAPIImpl(ICommandSender sender) {
         this.commandSender = sender;
@@ -32,7 +36,7 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
         data.put(Consts.algorithmName, name);
         data.put(Consts.input, input);
         data.put(Consts.resultAsRaw, resultAsRaw);
-        commandSender.sendMessage(Consts.startAlgorithmExecution, data);
+        commandSender.sendMessage(Consts.startAlgorithmExecution, data, false);
         return future;
     }
 
@@ -52,7 +56,7 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
         subPipeline.put("name", name);
         subPipeline.put(Consts.flowInput, flowInput);
         data.put(Consts.subPipeline, subPipeline);
-        commandSender.sendMessage("startStoredSubPipeline", data);
+        commandSender.sendMessage("startStoredSubPipeline", data, false);
         return future;
     }
 
@@ -85,7 +89,7 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
         subPipeline.put("options", options);
         subPipeline.put("webhooks", webhooks);
         data.put("subPipeline", subPipeline);
-        commandSender.sendMessage("startRawSubPipeline", data);
+        commandSender.sendMessage("startRawSubPipeline", data, false);
         return future;
     }
 
@@ -124,13 +128,19 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
                 "subPipelineError", "subPipelineStopped"};
         if (Arrays.asList(executionCommands).contains(command)) {
             String executionId = (String) data.get("execId");
+            JSONObject results = (JSONObject)data.get("response");
+            Object res = dataAdapter.getData(results,null);
+            data.put("response",res);
             executions.get(executionId).setResult(data);
-            logger.info(data);
+            logger.debug("algorithm execution result"+data);
         }
         if (Arrays.asList(subPipeCommands).contains(command)) {
             String executionId = (String) data.get("subPipelineId");
+            JSONObject results = (JSONObject)data.get("response");
+            Object res = dataAdapter.getData(results,null);
+            data.put("response",res);
             executions.get(executionId).setResult(data);
-            logger.info(data);
+            logger.debug("subpipeline execution result"+data);
         }
     }
 }

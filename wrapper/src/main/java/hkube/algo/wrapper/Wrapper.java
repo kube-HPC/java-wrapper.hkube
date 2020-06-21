@@ -16,6 +16,7 @@ import org.json.JSONObject;
 
 import javax.websocket.*;
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
@@ -32,7 +33,7 @@ public class Wrapper implements ICommandSender {
     DataServer dataServer;
     TaskStorage taskResultStorage;
     DataAdapter dataAdapter;
-
+    EncodingManager workerEncoder;
 
     private static final Logger logger = LogManager.getLogger();
 
@@ -43,6 +44,7 @@ public class Wrapper implements ICommandSender {
         dataServer = new DataServer(zmqServer, mConfig.commConfig);
         mAlgorithm = algorithm;
         taskResultStorage = new StorageFactory(config.storageConfig).getTaskStorage();
+        workerEncoder = new EncodingManager(mConfig.getEncodingType());
         connect();
     }
 
@@ -112,26 +114,36 @@ public class Wrapper implements ICommandSender {
      */
     @OnError
     public void onError(Session userSession, Throwable error) {
-        logger.info("closing websocket" + error);
+        logger.error("closing websocket" + error);
     }
 
-    public void sendMessage(String command, JSONObject data) {
-        logger.info("Sending message: " + command);
-        Map<String, Object> toSend = new HashMap<String, Object>();
+    public void sendMessage(String command, JSONObject data, boolean isError) {
+        logger.info("Sending message to worker: " + command);
+        Map<String, Object> toSend = new HashMap();
         toSend.put("command", command);
-        toSend.put("data", data);
+        if(isError){
+            toSend.put("error", data);
+        }else {
+            toSend.put("data", data);
+        }
         JSONObject message = new JSONObject(toSend);
-        this.userSession.getAsyncRemote().sendText(message.toString());
-    }
-    public void sendError(String command, JSONObject data) {
-        logger.info("Sending message: " + command);
-        Map<String, Object> toSend = new HashMap<String, Object>();
-        toSend.put("command", command);
-        toSend.put("error", data);
-        JSONObject message = new JSONObject(toSend);
-        this.userSession.getAsyncRemote().sendText(message.toString());
+        if(workerEncoder.getName().equals("json")) {
+            this.userSession.getAsyncRemote().sendText(message.toString());
+        }
+        else{
+            JSONObject root = new JSONObject();
+            root.put("data", toSend);
+            byte[] bytes = workerEncoder.encodeNoHeader(root.toMap());
+            ByteBuffer buffer = ByteBuffer.wrap(bytes);
+            this.userSession.getAsyncRemote().sendBinary(buffer);
+        }
     }
 
+    @OnMessage
+    public void onMessage(String message) {
+            JSONObject msgAsJson = new JSONObject(message);
+            onMessage(msgAsJson);
+    }
 
     /**
      * Callback hook for Message Events. This method will be invoked when a client
@@ -140,15 +152,21 @@ public class Wrapper implements ICommandSender {
      * @param message The text message
      */
     @OnMessage
-    public void onMessage(String message) {
+    public void onMessage(byte[] message) {
+
+        JSONObject msgAsJson = new JSONObject((Map) ((Map) workerEncoder.decodeNoHeader(message)).get("data"));
+        onMessage(msgAsJson);
+
+    }
+
+    private void onMessage(JSONObject msgAsJson) {
         try {
-            JSONObject msgAsJson = new JSONObject(message);
             String command = (String) msgAsJson.get("command");
             JSONObject data = msgAsJson.optJSONObject("data");
             listeners.forEach(listener -> {
                 listener.onCommand(command, data);
             });
-            logger.info("got command : " + command);
+            logger.info("got message from worker:" + command);
             CompletableFuture.supplyAsync(() -> {
                 try {
                     switch (command) {
@@ -159,39 +177,43 @@ public class Wrapper implements ICommandSender {
                             } else {
                                 mInput = new JSONArray();
                             }
-//                            logger.info("data: "+data);
-
                             mAlgorithm.Init(mArgs);
-                            sendMessage("initialized", null);
+                            sendMessage("initialized", null, false);
                             break;
                         case "exit":
                             mAlgorithm.Cleanup();
-                            sendMessage("exited", null);
+                            sendMessage("exited", null, false);
                             System.exit(0);
                             break;
                         case "start":
-                            sendMessage("started", null);
+                            sendMessage("started", null, false);
                             try {
+                                logger.debug("Before fetching input data");
                                 mInput = dataAdapter.placeData(mArgs);
-                                logger.debug("input data after decoding "+ mInput);
+                                logger.debug("After fetching input data");
+                                if(logger.isDebugEnabled()) {
+                                    logger.debug("input data after decoding " + mInput);
+                                }
+                                logger.debug("Before running algorithm");
                                 JSONObject res = mAlgorithm.Start(mInput, hkubeAPI);
+                                logger.debug("After running algorithm");
                                 String taskId = (String) mArgs.get("taskId");
                                 String jobId = (String) mArgs.get("jobId");
                                 dataServer.addTaskData(taskId, res);
                                 JSONArray savePaths = (JSONArray) ((JSONObject) mArgs.get("info")).get("savePaths");
-                                Map metaData =  dataAdapter.getMetadata(savePaths,res);
-                                int resEncodedSize = dataAdapter.getEncodedSize(res,mConfig.commConfig.getEncodingType());
-                                JSONObject resultStoringData = dataAdapter.wrapResult(mConfig, jobId, taskId,metaData,resEncodedSize);
+                                Map metaData = dataAdapter.getMetadata(savePaths, res);
+                                int resEncodedSize = dataAdapter.getEncodedSize(res, mConfig.commConfig.getEncodingType());
+                                JSONObject resultStoringData = dataAdapter.wrapResult(mConfig, jobId, taskId, metaData, resEncodedSize);
                                 logger.debug("result storing data" + resultStoringData);
-                                sendMessage("storing", resultStoringData);
+                                sendMessage("storing", resultStoringData, false);
                                 taskResultStorage.put((String) mArgs.get("jobId"), taskId, res.toMap());
-                                sendMessage("done", new JSONObject());
+                                sendMessage("done", new JSONObject(), false);
                             } catch (Exception ex) {
                                 logger.error("unexpected exception", ex);
                                 Map<String, String> res = new HashMap<>();
                                 res.put("code", "Failed");
                                 res.put("message", ex.toString());
-                                sendError("errorMessage", new JSONObject(res));
+                                sendMessage("errorMessage", new JSONObject(res),true);
                             } finally {
                                 mArgs = new JSONObject();
                                 mInput = new JSONArray();
@@ -199,7 +221,7 @@ public class Wrapper implements ICommandSender {
                             break;
                         case "stop":
                             mAlgorithm.Stop();
-                            sendMessage("stopped", null);
+                            sendMessage("stopped", null, false);
                             break;
                         default:
                             logger.info("got command: " + command);
@@ -214,6 +236,7 @@ public class Wrapper implements ICommandSender {
             logger.error(exc);
         }
     }
+
 
     private void onExit() {
         logger.warn("exiting");

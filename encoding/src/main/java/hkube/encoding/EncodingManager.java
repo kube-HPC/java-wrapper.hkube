@@ -4,18 +4,19 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class EncodingManager extends BaseEncoder implements IEncoder {
-    Map<String,IEncoder> encodings = new HashMap();
+    Map<String, IEncoder> encodings = new HashMap();
     String defaultEncoding;
 
     public EncodingManager(String defaultEncoding) {
         this.defaultEncoding = defaultEncoding;
-        IEncoder jsonEncoder = new JsonEncoder();
-        encodings.put("2", jsonEncoder);
-        encodings.put("json", jsonEncoder);
-        IEncoder msgPackEncoder = new MSGPackEncoder();
-        encodings.put("3", msgPackEncoder);
-        encodings.put("msgpack", msgPackEncoder);
+        addEncoder(new JsonEncoder());
+        addEncoder(new MSGPackEncoder());
+        addEncoder(new BSONEncoder());
+    }
 
+    void addEncoder(IEncoder encoder) {
+        encodings.put(encoder.getEncodingType() + "", encoder);
+        encodings.put(encoder.getName(), encoder);
     }
 
     private Object decodeNoHeader(byte[] data, IEncoder encoder) {
@@ -25,24 +26,25 @@ public class EncodingManager extends BaseEncoder implements IEncoder {
 
     @Override
     public byte[] encode(Object obj) {
-        return  encodings.get(defaultEncoding).encode(obj);
+        return encodings.get(defaultEncoding).encode(obj);
     }
 
     @Override
     public byte[] encodeNoHeader(Object obj) {
-        return  encodings.get(defaultEncoding).encodeNoHeader(obj);
+        return encodings.get(defaultEncoding).encodeNoHeader(obj);
     }
 
     public Object decode(byte[] data) {
         Header info = getInfo(data);
         if (info == null) {
-            IEncoder encoder =encodings.get(defaultEncoding);
+            IEncoder encoder = encodings.get(defaultEncoding);
             return decodeNoHeader(data, encoder);
         }
         if (!info.isEncoded()) {
             return removeHeader(data);
         } else {
-            IEncoder encoder = encodings.get(info.getEncodingType().toString());;
+            IEncoder encoder = encodings.get(info.getEncodingType().toString());
+            ;
             return encoder.decode(data);
         }
     }
@@ -55,6 +57,11 @@ public class EncodingManager extends BaseEncoder implements IEncoder {
 
     @Override
     public Integer getEncodingType() {
-        return 0;
+        return encodings.get(defaultEncoding).getEncodingType();
+    }
+
+    @Override
+    public String getName() {
+        return encodings.get(defaultEncoding).getName();
     }
 }

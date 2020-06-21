@@ -20,7 +20,7 @@ public class WrapperConfig extends Config {
     }
 
     public String getEncodingType() {
-        return getStrEnvValue("WORKER_ALGORITHM_ENCODING", "json");
+        return getStrEnvValue("WORKER_ALGORITHM_ENCODING", "bson");
     }
 
     public String getStorageVersion() {

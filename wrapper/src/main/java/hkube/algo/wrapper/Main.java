@@ -2,6 +2,7 @@ package hkube.algo.wrapper;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.lookup.MainMapLookup;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,9 +12,19 @@ import java.net.URL;
 import java.net.URLClassLoader;
 
 class Main {
-    private static final Logger logger = LogManager.getLogger();
+    private static  Logger logger ;
 
     public static void main(String[] args) {
+        String logLevel;
+        String debugEnabled = System.getenv("DEBUG_ENABLED");
+        if(debugEnabled != null &&(debugEnabled.toLowerCase().equals("true"))){
+            logLevel = "DEBUG";
+        }else{
+            logLevel = "INFO";
+        }
+        MainMapLookup.setMainArguments(new String[]{logLevel});
+        logger = LogManager.getLogger();
+        logger.debug("debug enabled");
         try {
             if(args.length<1){
                 throw new RuntimeException("Must provide an argument pointing to Algorithm jar location");
