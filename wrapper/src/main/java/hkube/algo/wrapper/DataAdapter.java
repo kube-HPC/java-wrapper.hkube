@@ -35,37 +35,39 @@ public class DataAdapter {
             storageProxy.clear();
         }
         JSONObject storage = (JSONObject) args.get("storage");
-        Object flatInput = args.get("flatInput");
         Map<String, Object> results = new HashMap<>();
-        if (flatInput instanceof JSONObject && !((JSONObject) flatInput).isEmpty()) {
-            Iterator<Map.Entry<String, Object>> iterator = ((JSONObject) flatInput).toMap().entrySet().iterator();
+        if( args.has("flatInput")) {
+            Object flatInput = args.get("flatInput");
+            if (flatInput instanceof JSONObject && !((JSONObject) flatInput).isEmpty()) {
+                Iterator<Map.Entry<String, Object>> iterator = ((JSONObject) flatInput).toMap().entrySet().iterator();
 
-            while (iterator.hasNext()) {
-                Object value;
-                Map.Entry<String, Object> entry = iterator.next();
-                Object dataReference = entry.getValue();
-                if (!(dataReference instanceof String) || !((String) dataReference).startsWith("$$")) {
-                    value = dataReference;
-                    results.put(entry.getKey(), value);
-                } else {
-                    dataReference = ((String) dataReference).substring(2);
-                    Object item = storage.get((String) dataReference);
-                    String jobId = (String) args.get("jobId");
-                    if (item instanceof JSONArray) {
-                        value = new ArrayList();
-                        Iterator batchIterator = ((JSONArray) item).iterator();
-                        while (batchIterator.hasNext()) {
-                            JSONObject single = (JSONObject) batchIterator.next();
-                            value = getData(single, jobId);
-                        }
+                while (iterator.hasNext()) {
+                    Object value;
+                    Map.Entry<String, Object> entry = iterator.next();
+                    Object dataReference = entry.getValue();
+                    if (!(dataReference instanceof String) || !((String) dataReference).startsWith("$$")) {
+                        value = dataReference;
+                        results.put(entry.getKey(), value);
                     } else {
-                        value = getData((JSONObject) item, jobId);
+                        dataReference = ((String) dataReference).substring(2);
+                        Object item = storage.get((String) dataReference);
+                        String jobId = (String) args.get("jobId");
+                        if (item instanceof JSONArray) {
+                            value = new ArrayList();
+                            Iterator batchIterator = ((JSONArray) item).iterator();
+                            while (batchIterator.hasNext()) {
+                                JSONObject single = (JSONObject) batchIterator.next();
+                                value = getData(single, jobId);
+                            }
+                        } else {
+                            value = getData((JSONObject) item, jobId);
+                        }
+                        results.put(entry.getKey(), value);
                     }
-                    results.put(entry.getKey(), value);
                 }
+                args.put("input", results);
+                return new JSONArray(results.values());
             }
-            args.put("input", results);
-            return new JSONArray(results.values());
         }
         return (JSONArray) args.get("input");
     }

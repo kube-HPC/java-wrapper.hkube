@@ -19,10 +19,11 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
     int lastExcution = 0;
     ICommandSender commandSender;
     Map<String, APIExecutionFuture> executions = new HashMap();
-    WrapperConfig config = new WrapperConfig();
-    DataAdapter dataAdapter = new DataAdapter(config);
 
-    public HKubeAPIImpl(ICommandSender sender) {
+    DataAdapter dataAdapter;
+
+    public HKubeAPIImpl(ICommandSender sender, DataAdapter dataAdapter) {
+        this.dataAdapter = dataAdapter;
         this.commandSender = sender;
         sender.addResponseListener(this);
     }

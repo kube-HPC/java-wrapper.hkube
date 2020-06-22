@@ -20,8 +20,17 @@ public class WrapperConfig extends Config {
     }
 
     public String getEncodingType() {
-        return getStrEnvValue("WORKER_ALGORITHM_ENCODING", "bson");
+        return getStrEnvValue("WORKER_ALGORITHM_ENCODING", "json");
     }
+    public String getUrl() {
+            try{
+                return getStrEnvValue("WORKER_SOCKET_URL", "null");
+            }
+            catch (Throwable e){
+                return null;
+            }
+    }
+
 
     public String getStorageVersion() {
         return "v2";

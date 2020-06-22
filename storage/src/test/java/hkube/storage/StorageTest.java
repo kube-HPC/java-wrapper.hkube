@@ -7,13 +7,7 @@ import java.io.FileNotFoundException;
 
 public class StorageTest {
 
-    IStorageConfig config = new StorageConfig() {
-        @Override
-        public String getStorageType() {
-            return "test";
-        }
-
-    };
+    IStorageConfig config = new StorageConfig();
     @Test
     public void testStorageFactory() throws FileNotFoundException {
         StorageFactory factory = new StorageFactory(config);

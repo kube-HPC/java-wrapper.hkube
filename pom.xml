@@ -44,5 +44,6 @@
         <module>zmq-adapter</module>
         <module>communication</module>
         <module>encoding</module>
+        <module>debug-example</module>
     </modules>
 </project>

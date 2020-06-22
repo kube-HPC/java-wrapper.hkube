@@ -28,7 +28,7 @@ public class Wrapper implements ICommandSender {
     JSONObject mArgs;
     JSONArray mInput;
     List<CommandResponseListener> listeners = new ArrayList<>();
-    HKubeAPIImpl hkubeAPI = new HKubeAPIImpl(this);
+    HKubeAPIImpl hkubeAPI;
     ZMQServer zmqServer;
     DataServer dataServer;
     TaskStorage taskResultStorage;
@@ -40,6 +40,7 @@ public class Wrapper implements ICommandSender {
     public Wrapper(IAlgorithm algorithm, WrapperConfig config) {
         mConfig = config;
         dataAdapter = new DataAdapter(mConfig);
+        hkubeAPI = new HKubeAPIImpl(this, dataAdapter);
         zmqServer = new ZMQServer(mConfig.commConfig);
         dataServer = new DataServer(zmqServer, mConfig.commConfig);
         mAlgorithm = algorithm;
@@ -53,7 +54,12 @@ public class Wrapper implements ICommandSender {
     }
 
     private void connect() {
-        String uriString = "ws://" + mConfig.getHost() + ":" + mConfig.getPort() + "/?storage=" + mConfig.getStorageVersion() + "&encoding=" + mConfig.getEncodingType();
+
+        String uriString;
+        uriString = mConfig.getUrl();
+        if (uriString == null) {
+            uriString = "ws://" + mConfig.getHost() + ":" + mConfig.getPort() + "/?storage=" + mConfig.getStorageVersion() + "&encoding=" + mConfig.getEncodingType();
+        }
         try {
             logger.info("connecting to uri: " + uriString);
 
@@ -121,16 +127,15 @@ public class Wrapper implements ICommandSender {
         logger.info("Sending message to worker: " + command);
         Map<String, Object> toSend = new HashMap();
         toSend.put("command", command);
-        if(isError){
+        if (isError) {
             toSend.put("error", data);
-        }else {
+        } else {
             toSend.put("data", data);
         }
         JSONObject message = new JSONObject(toSend);
-        if(workerEncoder.getName().equals("json")) {
+        if (workerEncoder.getName().equals("json")) {
             this.userSession.getAsyncRemote().sendText(message.toString());
-        }
-        else{
+        } else {
             JSONObject root = new JSONObject();
             root.put("data", toSend);
             byte[] bytes = workerEncoder.encodeNoHeader(root.toMap());
@@ -141,8 +146,8 @@ public class Wrapper implements ICommandSender {
 
     @OnMessage
     public void onMessage(String message) {
-            JSONObject msgAsJson = new JSONObject(message);
-            onMessage(msgAsJson);
+        JSONObject msgAsJson = new JSONObject(message);
+        onMessage(msgAsJson);
     }
 
     /**
@@ -191,7 +196,7 @@ public class Wrapper implements ICommandSender {
                                 logger.debug("Before fetching input data");
                                 mInput = dataAdapter.placeData(mArgs);
                                 logger.debug("After fetching input data");
-                                if(logger.isDebugEnabled()) {
+                                if (logger.isDebugEnabled()) {
                                     logger.debug("input data after decoding " + mInput);
                                 }
                                 logger.debug("Before running algorithm");
@@ -213,7 +218,7 @@ public class Wrapper implements ICommandSender {
                                 Map<String, String> res = new HashMap<>();
                                 res.put("code", "Failed");
                                 res.put("message", ex.toString());
-                                sendMessage("errorMessage", new JSONObject(res),true);
+                                sendMessage("errorMessage", new JSONObject(res), true);
                             } finally {
                                 mArgs = new JSONObject();
                                 mInput = new JSONArray();
