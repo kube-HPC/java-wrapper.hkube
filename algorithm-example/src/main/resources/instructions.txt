@@ -68,12 +68,12 @@ Create a HKube java written algorithm.
     1. "env" to "java"
     2. "entryPoint" to the fully qualified name of your class implementing IAlgorithm.
 
-3. Run algorithm locally and as part of a pipeline on the cluster.
+3. Run algorithm locally (for debugging) and as part of a pipeline on the cluster.
     A. Main class.
        To run is hkube.algo.wrapper.Main from artifact io.hkube:wrapper:1.0-SNAPSHOT (also found in https://oss.sonatype.org/content/repositories/snapshots)
     B. Runtime ClassPath
-       1) io.hkube:wrapper:1.0-SNAPSHOT
-       2)
+       1) io.hkube:wrapper:1.0-SNAPSHOT and its dependencies.
+       2) The written algorithm module.
     C. Environment variables:
        When running the algorithm locally you need to set 2 environment variables:
        1) ALGORITHM_ENTRY_POINT - The name of the class you wrote implementing IAlgorithm.
