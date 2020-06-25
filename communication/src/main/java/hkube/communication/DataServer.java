@@ -2,14 +2,14 @@ package hkube.communication;
 
 import hkube.encoding.EncodingManager;
 import hkube.encoding.IEncoder;
-import hkube.encoding.MSGPackEncoder;
 import org.json.JSONObject;
 
 import java.util.*;
 import java.util.stream.Collectors;
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 public class DataServer implements IRequestListener {
-
+    private static final Logger logger = LogManager.getLogger();
     IRequestServer communication;
     IEncoder encoder;
 
@@ -54,24 +54,42 @@ public class DataServer implements IRequestListener {
 
     @Override
     public void onRequest(byte[] request) {
-        Map requestInfo = (Map) encoder.decode(request);
-        String taskId = (String) requestInfo.get("taskId");
-        String path = (String) requestInfo.get("path");
-        List<String> tasks = (List) requestInfo.get("tasks");
-        if (taskId == null && tasks == null) {
-            communication.reply(this.encoder.encode(createError("unknown", "Request must contain either task or tasks attribute")));
-        } else if (taskId != null) {
-            communication.reply(this.encoder.encode(getResult(taskId, path)));
-        } else {
-            List items = tasks.stream().map((task) -> getResult(task, path)).collect(Collectors.toList());
-            boolean hasError = items.stream().anyMatch(item -> {
-                if (item.getClass().equals(JSONObject.class) && ((JSONObject) item).get("hkube_error") != null)
-                    return true;
-                else return false;
-            });
+        try {
+            logger.debug("Got Request");
+            Map requestInfo = (Map) encoder.decode(request);
+            if(logger.isDebugEnabled()){
+                logger.debug("Got request "+new JSONObject((requestInfo)));
+            }
+            String taskId = (String) requestInfo.get("taskId");
+            String path = (String) requestInfo.get("path");
+            List<String> tasks = (List) requestInfo.get("tasks");
+
+            if (taskId == null && tasks == null) {
+                communication.reply(this.encoder.encode(createError("unknown", "Request must contain either task or tasks attribute")));
+            } else if (taskId != null) {
+                communication.reply(this.encoder.encode(getResult(taskId, path)));
+            } else {
+                List items = tasks.stream().map((task) -> getResult(task, path)).collect(Collectors.toList());
+                boolean hasError = items.stream().anyMatch(item -> {
+                    if (item.getClass().equals(JSONObject.class) && ((JSONObject) item).get("hkube_error") != null)
+                        return true;
+                    else return false;
+                });
+                JSONObject result = new JSONObject();
+                result.put("items", items);
+                result.put("errors", hasError);
+                if(logger.isDebugEnabled()){
+                    logger.debug("Responding "+result);
+                }
+                communication.reply(this.encoder.encode(result.toMap()));
+            }
+        } catch (Throwable e) {
             JSONObject result = new JSONObject();
+            List items = new ArrayList();
+            items.add(createError("unknown", "Unexpected error " + e.getMessage()));
             result.put("items", items);
-            result.put("errors", hasError);
+            result.put("errors", true);
+            logger.warn("Data server responding:" + result);
             communication.reply(this.encoder.encode(result.toMap()));
         }
     }

@@ -25,7 +25,7 @@ class Main {
         MainMapLookup.setMainArguments(new String[]{logLevel});
         logger = LogManager.getLogger();
 
-        logger.debug("debug enabled");
+        logger.debug("debug logging enabled");
         try {
             if (args.length < 1) {
                 throw new RuntimeException("Must provide an argument pointing to Algorithm jar location");
@@ -40,7 +40,9 @@ class Main {
 
                 ucl = URLClassLoader.newInstance(new URL[]{jarURL}, Main.class.getClassLoader());
             } else {
+                logger.warn("Running in debug mode");
                 ucl = URLClassLoader.newInstance(new URL[]{}, Main.class.getClassLoader());
+                Wrapper.setDebugMode();
             }
             WrapperConfig conf = new WrapperConfig();
             Class<?> clazz = ucl.loadClass(conf.getAlgorithmClassName());

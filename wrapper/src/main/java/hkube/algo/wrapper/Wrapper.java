@@ -23,6 +23,7 @@ import java.util.concurrent.CompletableFuture;
 @ClientEndpoint
 public class Wrapper implements ICommandSender {
     private final WrapperConfig mConfig;
+    private static boolean isDebugMode = false;
     Session userSession = null;
     private IAlgorithm mAlgorithm;
     JSONObject mArgs;
@@ -47,6 +48,10 @@ public class Wrapper implements ICommandSender {
         taskResultStorage = new StorageFactory(config.storageConfig).getTaskStorage();
         workerEncoder = new EncodingManager(mConfig.getEncodingType());
         connect();
+    }
+
+    public static void setDebugMode() {
+        isDebugMode=true;
     }
 
     public void addResponseListener(CommandResponseListener listener) {
@@ -210,9 +215,13 @@ public class Wrapper implements ICommandSender {
                                 int resEncodedSize = dataAdapter.getEncodedSize(res, mConfig.commConfig.getEncodingType());
                                 JSONObject resultStoringData = dataAdapter.wrapResult(mConfig, jobId, taskId, metaData, resEncodedSize);
                                 logger.debug("result storing data" + resultStoringData);
-                                sendMessage("storing", resultStoringData, false);
-                                taskResultStorage.put((String) mArgs.get("jobId"), taskId, res.toMap());
-                                sendMessage("done", new JSONObject(), false);
+                                if(!isDebugMode) {
+                                    sendMessage("storing", resultStoringData, false);
+                                    taskResultStorage.put((String) mArgs.get("jobId"), taskId, res.toMap());
+                                    sendMessage("done", new JSONObject(), false);
+                                }else{
+                                    sendMessage("done",res,false);
+                                }
                             } catch (Exception ex) {
                                 logger.error("unexpected exception", ex);
                                 Map<String, String> res = new HashMap<>();

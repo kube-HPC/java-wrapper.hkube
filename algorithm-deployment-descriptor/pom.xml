@@ -3,22 +3,13 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>java-algo-parent</artifactId>
+        <artifactId>java-algo-hkube.wrapper-root</artifactId>
         <groupId>io.hkube</groupId>
         <version>1.0-SNAPSHOT</version>
-
     </parent>
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>algorithm-example</artifactId>
-    <repositories>
-        <repository>
-            <id>private_repo</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </repository>
-    </repositories>
-    <build>
-        <plugins>
 
-    </plugins>
-    </build>
+    <artifactId>algorithm-deployment-descriptor</artifactId>
+
+
 </project>

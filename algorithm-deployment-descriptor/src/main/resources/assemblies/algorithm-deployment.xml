@@ -11,6 +11,7 @@
             <directory>${project.basedir}</directory>
             <excludes>
                 <exclude>target/**</exclude>
+                <exclude>**encapsulated-algorithm.jar</exclude>
             </excludes>
         </fileSet>
     </fileSets>

@@ -45,5 +45,6 @@
         <module>communication</module>
         <module>encoding</module>
         <module>debug-example</module>
+        <module>algorithm-deployment-descriptor</module>
     </modules>
 </project>

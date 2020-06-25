@@ -55,7 +55,7 @@ public class HkubeAPI implements IAlgorithm {
             }
         };
         INode[] nodes ={node};
-       JSONObject raw =  hkubeAPI.startRawSubPipeLine("myRow",nodes,new JSONObject(),new HashMap(),new HashMap());
+       JSONObject raw =  hkubeAPI.startRawSubPipeLine("myRaw",nodes,new JSONObject(),new HashMap(),new HashMap());
         JSONObject algResult = new JSONObject();
         algResult.put("storedResult",stroedResult);
         algResult.put("algo-green-result",result);

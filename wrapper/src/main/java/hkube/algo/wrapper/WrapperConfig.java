@@ -24,7 +24,7 @@ public class WrapperConfig extends Config {
     }
     public String getUrl() {
             try{
-                return getStrEnvValue("WORKER_SOCKET_URL", "null");
+                return getStrEnvValue("WORKER_SOCKET_URL", null);
             }
             catch (Throwable e){
                 return null;
