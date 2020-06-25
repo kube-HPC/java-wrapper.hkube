@@ -63,22 +63,26 @@ Create a HKube java written algorithm.
 2. Deploy your artifact to hkube.
 
     A new algorithm can be created and registered from code via hkube UI or rest api.
+    
     1. If created from a git repository - make sure the repository root is the root of the java maven project created as described in 1.c.
     2. If created from an archived project - you can use maven assembly plugin to create the archive, as used in algorithm-example
 
     When deploying the algorithm, attributes are set in the New Algorithm ui form, or the rest request payload.
     Make sure the following attributes are set as follows:
+    
     1. "env" to "java"
     2. "entryPoint" to the fully qualified name of your class implementing IAlgorithm.
 
 3. Run algorithm locally (for debugging) and as part of a pipeline on the cluster.
 
-    A. Main class.
+    a. Main class.
        To run is hkube.algo.wrapper.Main from artifact io.hkube:wrapper:1.0-SNAPSHOT (also found in https://oss.sonatype.org/content/repositories/snapshots)
-    B. Runtime ClassPath
+    
+    b. Runtime ClassPath
        1) io.hkube:wrapper:1.0-SNAPSHOT and its dependencies.
        2) The written algorithm module.
-    C. Environment variables:
+    
+    c. Environment variables:
        When running the algorithm locally you need to set 2 environment variables:
        1) ALGORITHM_ENTRY_POINT - The name of the class you wrote implementing IAlgorithm.
        2) WORKER_SOCKET_URL - path obtained from a the debug algorithm defined on hkube deployment. (example ws://63.34.172.241/hkube/debug/something)
