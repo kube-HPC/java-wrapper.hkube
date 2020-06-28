@@ -67,7 +67,11 @@ public class DataServer implements IRequestListener {
             if (taskId == null && tasks == null) {
                 communication.reply(this.encoder.encode(createError("unknown", "Request must contain either task or tasks attribute")));
             } else if (taskId != null) {
-                communication.reply(this.encoder.encode(getResult(taskId, path)));
+                Object result = getResult(taskId,path);
+                if(logger.isDebugEnabled()){
+                    logger.debug("Responding" + result);
+                }
+                communication.reply(this.encoder.encode(result));
             } else {
                 List items = tasks.stream().map((task) -> getResult(task, path)).collect(Collectors.toList());
                 boolean hasError = items.stream().anyMatch(item -> {
@@ -103,6 +107,9 @@ public class DataServer implements IRequestListener {
 
             if (path != null && !path.equals("")) {
                 if (data instanceof JSONObject) {
+                    if(logger.isDebugEnabled()){
+                        logger.debug("quering " + path +" from " + data);
+                    }
                     result = ((JSONObject) data).query("/" + path.replaceAll("\\.", "/"));
                 } else {
                     result = createError("unknown", "Can't get data by path, data is not json");

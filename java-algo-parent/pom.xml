@@ -80,6 +80,39 @@
                             <shadedClassifierName>with-dependencies</shadedClassifierName>
                             <outputDirectory>${session.executionRootDirectory}</outputDirectory>
                             <minimizeJar>false</minimizeJar>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                        <exclude>META-INF/LICENSE</exclude>
+                                        <exclude>LICENSE</exclude> <!--if this is same as above, not required-->
+                                        <exclude>/*.png</exclude>
+                                        <exclude>/*.html</exclude>
+                                        <exclude>/*.jpeg</exclude>
+                                    </excludes>
+                                </filter>
+                                <filter>
+                                    <artifact>com.myproject.auto:*</artifact>
+                                    <excludes>
+                                        <exclude>com/myproject/auto/**</exclude> <!--to exclude a set of classes from the project structure-->
+                                    </excludes>
+                                </filter>
+                                <filter>
+                                    <artifact>org:*</artifact>
+                                    <excludes>
+                                        <exclude>org/**</exclude> <!--though the artifact naming needs to be refined for this-->
+                                    </excludes>
+                                </filter>
+                                <filter>
+                                    <artifact>com.google.common:**</artifact>
+                                    <excludes>
+                                        <exclude>com/google/common/**</exclude> <!--exclude classes from the respective artifacts-->
+                                    </excludes>
+                                </filter>
+                            </filters>
                         </configuration>
                     </execution>
                 </executions>

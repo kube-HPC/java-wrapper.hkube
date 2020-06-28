@@ -52,5 +52,6 @@
     <orderEntry type="library" name="Maven: org.zeromq:jeromq:0.5.2" level="project" />
     <orderEntry type="library" name="Maven: eu.neilalexander:jnacl:1.0.0" level="project" />
     <orderEntry type="module" module-name="algorithm-example" />
+    <orderEntry type="module" module-name="algorithm-deployment-descriptor" />
   </component>
 </module>
