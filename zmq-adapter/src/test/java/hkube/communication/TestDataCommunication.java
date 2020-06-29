@@ -40,7 +40,7 @@ public class TestDataCommunication {
         JSONObject data1 = parseJSON("data1.json");
         ds.addTaskData("taskId1",data1);
         ZMQRequest zmqr = new ZMQRequest("localhost", conf.getListeningPort(), conf);
-        DataRequest request = new DataRequest(zmqr,"taskId1",null,"level1.level2","msgpack");
+        DataRequest request = new SingleRequest(zmqr,"taskId1","level1.level2","msgpack");
         Object result = request.send();
         request.close();
         assert ((JSONObject)result).get("value2").equals("d2_l1_l2_value_2");
@@ -49,13 +49,13 @@ public class TestDataCommunication {
         data2[2]=6;
         ds.addTaskData("taskId2",data2);
         zmqr = new ZMQRequest("localhost", conf.getListeningPort(), conf);
-        request = new DataRequest(zmqr,"taskId2",null,null,"msgpack");
+        request = new SingleRequest(zmqr,"taskId2",null,"msgpack");
         result =   request.send();
         request.close();
         assert ((byte[])result)[1] == 5;
         assert ((byte[])result)[2] == 6;
         zmqr = new ZMQRequest("localhost", conf.getListeningPort(), conf);
-        request = new DataRequest(zmqr,"taskId1",null,null,"msgpack");
+        request = new SingleRequest(zmqr,"taskId1",null,"msgpack");
         result= request.send();
         assert ((JSONObject)result).query("/level1/value1").equals("d2_l1_value_1");
     }

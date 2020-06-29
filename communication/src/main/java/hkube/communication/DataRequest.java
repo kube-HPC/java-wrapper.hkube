@@ -8,11 +8,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeoutException;
 
-public class DataRequest {
+public abstract class DataRequest {
     IRequest requestAdapter;
     String taskId;
     List tasks;
@@ -31,29 +30,8 @@ public class DataRequest {
         }
     }
 
-    public Object send() throws TimeoutException {
-        HashMap map = new HashMap();
-        if (taskId != null) {
-            map.put("taskId", taskId);
-        }
-        if (path != null) {
-            map.put("path", path);
-        }
-        if (tasks != null) {
-            map.put("tasks", tasks);
-        }
-        Object decoded = encoder.decode(requestAdapter.send(encoder.encodeNoHeader(map)));
-        Object result = toJSON(decoded);
-        if (logger.isDebugEnabled()) {
-            logger.debug(result);
-        }
-        if (result instanceof JSONObject && ((JSONObject) result).has("hkube_error")) {
-            logger.warn(result.toString());
-            throw new RuntimeException(result.toString());
-        }
+    public abstract Object send() throws TimeoutException;
 
-        return result;
-    }
 
     void close() {
         requestAdapter.close();

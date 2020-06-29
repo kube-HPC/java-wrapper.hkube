@@ -61,7 +61,7 @@ public class DataServer implements IRequestListener {
                 logger.debug("Got request "+new JSONObject((requestInfo)));
             }
             String taskId = (String) requestInfo.get("taskId");
-            String path = (String) requestInfo.get("path");
+            String path = (String) requestInfo.get("dataPath");
             List<String> tasks = (List) requestInfo.get("tasks");
 
             if (taskId == null && tasks == null) {

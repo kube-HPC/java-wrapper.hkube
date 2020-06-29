@@ -1,6 +1,8 @@
 package hkube.algo.wrapper;
 
 
+import hkube.communication.BatchRequest;
+import hkube.communication.SingleRequest;
 import hkube.encoding.EncodingManager;
 import hkube.storage.StorageFactory;
 import hkube.storage.TaskStorage;
@@ -36,7 +38,7 @@ public class DataAdapter {
         }
         JSONObject storage = (JSONObject) args.get("storage");
         Map<String, Object> results = new HashMap<>();
-        if( args.has("flatInput")) {
+        if (args.has("flatInput")) {
             Object flatInput = args.get("flatInput");
             if (flatInput instanceof JSONObject && !((JSONObject) flatInput).isEmpty()) {
                 Iterator<Map.Entry<String, Object>> iterator = ((JSONObject) flatInput).toMap().entrySet().iterator();
@@ -47,6 +49,13 @@ public class DataAdapter {
                     Object dataReference = entry.getValue();
                     if (!(dataReference instanceof String) || !((String) dataReference).startsWith("$$")) {
                         value = dataReference;
+                        String key = entry.getKey();
+                        String[] keyParts = key.split("\\.");
+                        if (keyParts.length > 1) {
+                            JSONObject tempValue = new JSONObject();
+                            tempValue.put(keyParts[1], value);
+                            value = tempValue;
+                        }
                         results.put(entry.getKey(), value);
                     } else {
                         dataReference = ((String) dataReference).substring(2);
@@ -57,12 +66,20 @@ public class DataAdapter {
                             Iterator batchIterator = ((JSONArray) item).iterator();
                             while (batchIterator.hasNext()) {
                                 JSONObject single = (JSONObject) batchIterator.next();
-                                value = getData(single, jobId);
+                                Object singleData = getData(single, jobId);
+                                ((List) value).add(singleData);
                             }
                         } else {
                             value = getData((JSONObject) item, jobId);
                         }
-                        results.put(entry.getKey(), value);
+                        String key = entry.getKey();
+                        String[] keyParts = key.split("\\.");
+                        if (keyParts.length > 1) {
+                            JSONObject tempValue = new JSONObject();
+                            tempValue.put(keyParts[1], value);
+                            value = tempValue;
+                        }
+                        results.put(keyParts[0], value);
                     }
                 }
                 args.put("input", results);
@@ -85,20 +102,30 @@ public class DataAdapter {
 
 
         if (single.has("discovery")) {
-            if (single.has("tasks")) {
-                //batch with discovery
-                tasks = getStringListFromJSONArray((JSONArray) single.get("tasks"));
-            } else {
-                task = (String) single.get("taskId");
-            }
+
             JSONObject discovery = (JSONObject) single.get("discovery");
             String host = (String) discovery.get("host");
             String port = (String) discovery.get("port");
             ZMQRequest zmqr = new ZMQRequest(host, port, config.commConfig);
-
-            DataRequest request = new DataRequest(zmqr, task, tasks, path, config.commConfig.getEncodingType());
+            SingleRequest singleRequest = null;
+            BatchRequest batchRequest = null;
+            if (single.has("tasks")) {
+                //batch with discovery
+                tasks = getStringListFromJSONArray((JSONArray) single.get("tasks"));
+                batchRequest = new BatchRequest(zmqr, tasks, path, config.commConfig.getEncodingType());
+            } else {
+                task = (String) single.get("taskId");
+                singleRequest = new SingleRequest(zmqr, task, path, config.commConfig.getEncodingType());
+            }
             try {
-                value = request.send();
+                if (singleRequest != null)
+                    value = singleRequest.send();
+                else {
+                    Map batchReslut = batchRequest.send();
+                    List<String> missingTasks = tasks.stream().filter(taskId -> batchReslut.containsKey(taskId)).collect(Collectors.toList());
+                    value = missingTasks.stream().map((taskId) -> storageProxy.getInputParamFromStorage(jobId, taskId, path)).collect(Collectors.toList());
+                    ((Collection) value).addAll(batchReslut.values());
+                }
             } catch (TimeoutException e) {
                 logger.warn("Timeout trying to get output from " + host + ":" + port);
             } catch (Throwable e) {
