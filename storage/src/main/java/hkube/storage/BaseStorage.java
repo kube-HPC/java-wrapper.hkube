@@ -24,6 +24,9 @@ public abstract class BaseStorage {
         byte[] encoded = encoder.encode(data);
         adapter.put(enhancePath(path), encoded);
     }
+    void putEncoded(String path, byte[] data) {
+        adapter.put(enhancePath(path), data);
+    }
 
    Object get(String path) throws FileNotFoundException {
         byte[] encoded=  adapter.get(enhancePath(path));

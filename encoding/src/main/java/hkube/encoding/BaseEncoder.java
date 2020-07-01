@@ -1,6 +1,8 @@
 package hkube.encoding;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 public abstract class BaseEncoder {
@@ -49,6 +51,17 @@ public abstract class BaseEncoder {
     public byte[] removeHeader(byte[] data) {
         int headerLength = (int) data[1];
         return Arrays.copyOfRange(data, headerLength, data.length);
+    }
+    public ByteArrayInputStream getByteInputStreamNoHeader(byte[] data) {
+        int headerLength = (int) data[1];
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(data);
+        byteArrayInputStream.read(new byte[headerLength],0, headerLength);
+        return byteArrayInputStream;
+    }
+    public ByteBuffer getByteBufferNoHeader(byte[] data) {
+        int headerLength = (int) data[1];
+        ByteBuffer buf = ByteBuffer.wrap(data,headerLength,data.length-headerLength);
+        return buf;
     }
 
     public abstract Integer getEncodingType();

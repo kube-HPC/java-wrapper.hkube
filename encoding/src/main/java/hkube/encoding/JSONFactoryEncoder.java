@@ -4,13 +4,15 @@ import hkube.utils.Timing;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.fasterxml.jackson.core.JsonFactory;
+
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 
 public abstract class JSONFactoryEncoder extends BaseEncoder implements IEncoder{
     final static int DATA_TYPE_ENCODED = 3;
-    private static final Logger logger = LogManager.getLogger();
+    private final Logger logger = LogManager.getLogger(this.getClass());
     private final JsonFactory factory;
 
     JSONFactoryEncoder(JsonFactory factory){
@@ -58,13 +60,12 @@ public abstract class JSONFactoryEncoder extends BaseEncoder implements IEncoder
 
     @Override
     public Object decode(byte[] data) {
-
-        byte[] encodedData = removeHeader(data);
         Timing timing = new Timing(logger, "decode");
+        ByteArrayInputStream encodedDataStream = getByteInputStreamNoHeader(data);
         timing.start();
         ObjectMapper objectMapper = new ObjectMapper(factory);
         try {
-            Object result = objectMapper.readValue(encodedData, Object.class);
+            Object result = objectMapper.readValue(encodedDataStream, Object.class);
             timing.end();
             timing.logInfo();
             return result;
@@ -80,7 +81,10 @@ public abstract class JSONFactoryEncoder extends BaseEncoder implements IEncoder
         timing.start();
         ObjectMapper objectMapper = new ObjectMapper(factory);
         try {
-            return objectMapper.readValue(data,Object.class);
+            Object result = objectMapper.readValue(data, Object.class);
+            timing.end();
+            timing.logInfo();
+            return result;
         } catch (Throwable e) {
             return null;
         }

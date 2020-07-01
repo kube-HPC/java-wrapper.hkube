@@ -27,7 +27,7 @@ public class Wrapper implements ICommandSender {
     Session userSession = null;
     private IAlgorithm mAlgorithm;
     JSONObject mArgs;
-    JSONArray mInput;
+
     List<CommandResponseListener> listeners = new ArrayList<>();
     HKubeAPIImpl hkubeAPI;
     ZMQServer zmqServer;
@@ -182,11 +182,6 @@ public class Wrapper implements ICommandSender {
                     switch (command) {
                         case "initialize":
                             mArgs = data;
-                            if (mArgs != null) {
-                                mInput = mArgs.getJSONArray("input");
-                            } else {
-                                mInput = new JSONArray();
-                            }
                             mAlgorithm.Init(mArgs);
                             sendMessage("initialized", null, false);
                             break;
@@ -197,27 +192,32 @@ public class Wrapper implements ICommandSender {
                             break;
                         case "start":
                             sendMessage("started", null, false);
+                            Collection input;
                             try {
                                 logger.debug("Before fetching input data");
-                                mInput = dataAdapter.placeData(mArgs);
+                                input = dataAdapter.placeData(mArgs);
                                 logger.debug("After fetching input data");
                                 if (logger.isDebugEnabled()) {
-                                    logger.debug("input data after decoding " + mInput);
+                                    logger.debug("input data after decoding " + input);
                                 }
                                 logger.debug("Before running algorithm");
-                                JSONObject res = mAlgorithm.Start(mInput, hkubeAPI);
+                                JSONObject res;
+                                res = mAlgorithm.Start( input, hkubeAPI);
                                 logger.debug("After running algorithm");
                                 String taskId = (String) mArgs.get("taskId");
                                 String jobId = (String) mArgs.get("jobId");
                                 dataServer.addTaskData(taskId, res);
                                 JSONArray savePaths = (JSONArray) ((JSONObject) mArgs.get("info")).get("savePaths");
                                 Map metaData = dataAdapter.getMetadata(savePaths, res);
-                                int resEncodedSize = dataAdapter.getEncodedSize(res, mConfig.commConfig.getEncodingType());
-                                JSONObject resultStoringData = dataAdapter.wrapResult(mConfig, jobId, taskId, metaData, resEncodedSize);
-                                logger.debug("result storing data" + resultStoringData);
+                                byte [] encodedData = dataAdapter.encode(res, mConfig.commConfig.getEncodingType());
+                                int resEncodedSize = encodedData.length;
+                                JSONObject resultStoringInfo = dataAdapter.getStoringInfo(mConfig, jobId, taskId, metaData, resEncodedSize);
+                                if(logger.isDebugEnabled()){
+                                    logger.debug("result storing data" + resultStoringInfo);
+                                }
                                 if(!isDebugMode) {
-                                    sendMessage("storing", resultStoringData, false);
-                                    taskResultStorage.put((String) mArgs.get("jobId"), taskId, res.toMap());
+                                    sendMessage("storing", resultStoringInfo, false);
+                                    taskResultStorage.putEncoded((String) mArgs.get("jobId"), taskId, encodedData);
                                     sendMessage("done", new JSONObject(), false);
                                 }else{
                                     sendMessage("done",res,false);
@@ -230,7 +230,6 @@ public class Wrapper implements ICommandSender {
                                 sendMessage("errorMessage", new JSONObject(res), true);
                             } finally {
                                 mArgs = new JSONObject();
-                                mInput = new JSONArray();
                             }
                             break;
                         case "stop":

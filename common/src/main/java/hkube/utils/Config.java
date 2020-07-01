@@ -11,7 +11,7 @@ public class Config {
     private final Logger logger;
     Properties configs;
     public Config() {
-        logger = LogManager.getLogger();
+        logger = LogManager.getLogger(this.getClass());
         configs = new Properties();
         try {
             configs.load(this.getClass().getClassLoader().getResourceAsStream("config.properties"));

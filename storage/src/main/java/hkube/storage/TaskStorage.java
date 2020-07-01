@@ -13,7 +13,9 @@ public class TaskStorage extends BaseStorage {
     public void put(String jobId, String taskId, Object data) {
         super.put(createPath(jobId, taskId), data);
     }
-
+    public void putEncoded(String jobId, String taskId, byte[] data) {
+        super.putEncoded(createPath(jobId, taskId), data);
+    }
     public Object get(String jobId, String taskId) throws FileNotFoundException {
         return super.get(createPath(jobId, taskId));
     }

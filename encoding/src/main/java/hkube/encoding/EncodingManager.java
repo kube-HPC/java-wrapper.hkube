@@ -41,7 +41,8 @@ public class EncodingManager extends BaseEncoder implements IEncoder {
             return decodeNoHeader(data, encoder);
         }
         if (!info.isEncoded()) {
-            return removeHeader(data);
+
+            return getByteBufferNoHeader(data);
         } else {
             IEncoder encoder = encodings.get(info.getEncodingType().toString());
             ;

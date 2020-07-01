@@ -1,51 +1,37 @@
 import hkube.algo.wrapper.IAlgorithm;
 import hkube.api.IHKubeAPI;
-import org.json.JSONObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.json.JSONObject;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
+import java.util.Date;
 
-public class InputOutput implements IAlgorithm {
+public class InputOutWhen implements IAlgorithm {
 
     private static final Logger logger = LogManager.getLogger();
-
     @Override
     public void Init(JSONObject args) {
-        if (logger.isDebugEnabled()) {
+        if(logger.isDebugEnabled()) {
             logger.debug(args.toString());
         }
     }
-
 
     @Override
     public JSONObject Start(Collection input, IHKubeAPI hkubeAPI) throws Exception {
         if (logger.isDebugEnabled()) {
             logger.debug(input.toString());
         }
-
-        List outputList = new ArrayList();
-        input.stream().forEach(item -> {
-            if (item instanceof ByteBuffer) {
-                byte[] arr = new byte[((ByteBuffer) item).remaining()];
-                ((ByteBuffer) item).get(arr);
-                outputList.add(arr);
-            } else outputList.add(item);
-        });
         JSONObject output = new JSONObject();
-        output.put("prevInput", outputList);
+        output.put("prevInput", new Date().toString());
         String index0 = null;
-        try {
-            if (input.size() > 0)
-                index0 = input.iterator().next().toString();
+        try {if(input.size()>0)
+            index0 = input.iterator().next().toString();
         } catch (Exception e) {
 
         }
-        if (input.size() > 1 && index0 != null && index0.equals("b")) {
+        if (input.size()>1 && index0 != null && index0.equals("b")) {
             Integer numberOfbytes = Integer.valueOf(input.iterator().next().toString());
             byte[] myBytes = new byte[numberOfbytes];
             output.put("addedBytes", myBytes);

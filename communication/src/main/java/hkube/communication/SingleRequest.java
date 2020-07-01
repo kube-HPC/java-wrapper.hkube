@@ -39,7 +39,7 @@ public class SingleRequest extends DataRequest {
                 throw new RuntimeException(jsonObjectResult.toString());
             }
             if (tasks != null ){
-                if(jsonObjectResult.has("errors") && jsonObjectResult.getString("errors").equalsIgnoreCase("true")){
+                if(jsonObjectResult.has("errors") && jsonObjectResult.getBoolean("errors")==true){
                     if(jsonObjectResult.has("items")){
                         JSONArray items = jsonObjectResult.getJSONArray("items");
                         Iterator itemIterator = items.iterator();

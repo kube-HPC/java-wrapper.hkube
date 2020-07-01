@@ -10,6 +10,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -52,6 +53,9 @@ public class TestDataCommunication {
         request = new SingleRequest(zmqr,"taskId2",null,"msgpack");
         result =   request.send();
         request.close();
+        ByteBuffer buf = (ByteBuffer) result;
+        result = new byte[buf.remaining()];
+        buf.get((byte[])result);
         assert ((byte[])result)[1] == 5;
         assert ((byte[])result)[2] == 6;
         zmqr = new ZMQRequest("localhost", conf.getListeningPort(), conf);

@@ -12,7 +12,6 @@ import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import hkube.communication.zmq.ZMQRequest;
-import hkube.communication.DataRequest;
 
 import java.util.*;
 import java.util.concurrent.TimeoutException;
@@ -31,7 +30,7 @@ public class DataAdapter {
     }
 
 
-    public JSONArray placeData(JSONObject args) {
+    public Collection placeData(JSONObject args) {
         Boolean useCache = args.getBoolean("useCache");
         if (!useCache) {
             storageProxy.clear();
@@ -82,11 +81,16 @@ public class DataAdapter {
                         results.put(keyParts[0], value);
                     }
                 }
-                args.put("input", results);
-                return new JSONArray(results.values());
+                return results.values();
             }
         }
-        return (JSONArray) args.get("input");
+        JSONArray jsonArray =  (JSONArray)args.get("input");
+        Iterator iterator = jsonArray.iterator();
+        Collection jsonObjects = new ArrayList();
+        while(iterator.hasNext()){
+            jsonObjects.add(iterator.next());
+        }
+        return jsonObjects;
     }
 
     public Object getData(JSONObject single, String jobId) {
@@ -183,12 +187,12 @@ public class DataAdapter {
         return metadata;
     }
 
-    int getEncodedSize(JSONObject toBeEncoded, String encodingType) {
+    byte[] encode(JSONObject toBeEncoded, String encodingType) {
         byte[] encodedBytes = new EncodingManager(encodingType).encode(toBeEncoded.toMap());
-        return encodedBytes.length;
+        return encodedBytes;
     }
 
-    JSONObject wrapResult(WrapperConfig config, String jobId, String taskId, Map metadata, int size) {
+    JSONObject getStoringInfo(WrapperConfig config, String jobId, String taskId, Map metadata, int size) {
         JSONObject wrappedResult = new JSONObject();
 
         JSONObject storageInfo = new JSONObject();

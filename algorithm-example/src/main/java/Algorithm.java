@@ -1,9 +1,10 @@
 import hkube.algo.wrapper.IAlgorithm;
 import hkube.api.IHKubeAPI;
 import hkube.api.INode;
-import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -16,7 +17,7 @@ public class Algorithm implements IAlgorithm {
     }
 
     @Override
-    public JSONObject Start(JSONArray input, IHKubeAPI hkubeAPI) throws Exception {
+    public JSONObject Start(Collection input, IHKubeAPI hkubeAPI) throws Exception {
         Map<String, Object> data = new HashMap<>();
         data.put("myAnswer", 33);
         data.put("mirror", input);
