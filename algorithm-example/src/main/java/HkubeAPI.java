@@ -13,24 +13,24 @@ public class HkubeAPI implements IAlgorithm {
 
 
     @Override
-    public void Init(JSONObject args) {
+    public void Init(Map args) {
 
     }
 
     @Override
-    public JSONObject Start(Collection input, IHKubeAPI hkubeAPI) throws Exception {
+    public Map Start(Map input, IHKubeAPI hkubeAPI) throws Exception {
         Map<String, Object> data = new HashMap<>();
         data.put("myAnswer", 33);
         data.put("mirror", input);
         JSONArray jsonArray = new JSONArray();
         jsonArray.put(0,data);
-        JSONObject result =  hkubeAPI.startAlgorithm("green-alg",jsonArray,false);
+        Map result =  hkubeAPI.startAlgorithm("green-alg",jsonArray,false);
         JSONObject simpleInput = new JSONObject();
         Map files = new HashMap();
         files.put("link","thislink");
         files.put("other","otherValue");
         simpleInput.put("files",files);
-        JSONObject stroedResult =  hkubeAPI.startStoredPipeLine("simple",simpleInput);
+        Map stroedResult =  hkubeAPI.startStoredPipeLine("simple",simpleInput);
         INode node = new INode() {
             @Override
             public String getName() {
@@ -57,8 +57,8 @@ public class HkubeAPI implements IAlgorithm {
             }
         };
         INode[] nodes ={node};
-       JSONObject raw =  hkubeAPI.startRawSubPipeLine("myRaw",nodes,new JSONObject(),new HashMap(),new HashMap());
-        JSONObject algResult = new JSONObject();
+       Map raw =  hkubeAPI.startRawSubPipeLine("myRaw",nodes,new JSONObject(),new HashMap(),new HashMap());
+        Map algResult = new HashMap<>();
         algResult.put("storedResult",stroedResult);
         algResult.put("algo-green-result",result);
         algResult.put("rawResult",raw);

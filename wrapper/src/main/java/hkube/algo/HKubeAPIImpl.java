@@ -29,10 +29,10 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
     }
 
     @Override
-    public Future<JSONObject> startAlgorithmAsynch(String name, JSONArray input, boolean resultAsRaw) {
+    public Future<Map> startAlgorithmAsynch(String name, JSONArray input, boolean resultAsRaw) {
         APIExecutionFuture future = new APIExecutionFuture();
         String executionId = getExecutionId(future);
-        JSONObject data = new JSONObject();
+        Map data = new HashMap();
         data.put(Consts.execId, executionId);
         data.put(Consts.algorithmName, name);
         data.put(Consts.input, input);
@@ -42,16 +42,16 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
     }
 
     @Override
-    public JSONObject startAlgorithm(String name, JSONArray input, boolean resultAsRaw) {
+    public Map startAlgorithm(String name, JSONArray input, boolean resultAsRaw) {
         APIExecutionFuture future = (APIExecutionFuture) startAlgorithmAsynch(name, input, resultAsRaw);
         return returnWhenExecDone(future);
     }
 
     @Override
-    public Future<JSONObject> startStoredPipeLineAsynch(String name, JSONObject flowInput) {
+    public Future<Map> startStoredPipeLineAsynch(String name, JSONObject flowInput) {
         APIExecutionFuture future = new APIExecutionFuture();
         String executionId = getExecutionId(future);
-        JSONObject data = new JSONObject();
+        Map data = new HashMap();
         data.put(Consts.subPipelineId, executionId);
         Map subPipeline = new HashMap();
         subPipeline.put("name", name);
@@ -62,17 +62,17 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
     }
 
     @Override
-    public JSONObject startStoredPipeLine(String name, JSONObject flowInput) {
+    public Map startStoredPipeLine(String name, JSONObject flowInput) {
         APIExecutionFuture future = (APIExecutionFuture) startStoredPipeLineAsynch(name, flowInput);
         return returnWhenExecDone(future);
     }
 
     @Override
-    public Future<JSONObject> startRawSubPipeLineAsynch(String name, INode[] nodes, JSONObject flowInput, Map options, Map webhooks) {
+    public Future<Map> startRawSubPipeLineAsynch(String name, INode[] nodes, JSONObject flowInput, Map options, Map webhooks) {
         APIExecutionFuture future = new APIExecutionFuture();
         String executionId;
         executionId = getExecutionId(future);
-        JSONObject data = new JSONObject();
+        Map data = new HashMap();
         data.put("subPipelineId", executionId);
         List nodesList = new ArrayList();
         Arrays.asList(nodes).forEach(node -> {
@@ -95,7 +95,7 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
     }
 
     @Override
-    public JSONObject startRawSubPipeLine(String name, INode[] nodes, JSONObject flowInput, Map options, Map webhooks) {
+    public Map startRawSubPipeLine(String name, INode[] nodes, JSONObject flowInput, Map options, Map webhooks) {
         APIExecutionFuture future = (APIExecutionFuture) startRawSubPipeLineAsynch(name, nodes, flowInput, options, webhooks);
         return returnWhenExecDone(future);
     }
@@ -106,7 +106,7 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
         return executionId;
     }
 
-    JSONObject returnWhenExecDone(APIExecutionFuture future) {
+    Map returnWhenExecDone(APIExecutionFuture future) {
         while (!future.isDone()) {
             try {
                 Thread.sleep(100);
@@ -123,13 +123,13 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
 
 
     @Override
-    public void onCommand(String command, JSONObject data) {
+    public void onCommand(String command, Map data) {
         String[] executionCommands = {"algorithmExecutionDone", "algorithmExecutionError"};
         String[] subPipeCommands = {"subPipelineDone",
                 "subPipelineError", "subPipelineStopped"};
         if (Arrays.asList(executionCommands).contains(command)) {
             String executionId = (String) data.get("execId");
-            JSONObject results = (JSONObject)data.get("response");
+            Map results = (Map)data.get("response");
             Object res = dataAdapter.getData(results,null);
             data.put("response",res);
             executions.get(executionId).setResult(data);
@@ -137,7 +137,7 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
         }
         if (Arrays.asList(subPipeCommands).contains(command)) {
             String executionId = (String) data.get("subPipelineId");
-            JSONObject results = (JSONObject)data.get("response");
+            Map results = (Map)data.get("response");
             Object res = dataAdapter.getData(results,null);
             data.put("response",res);
             executions.get(executionId).setResult(data);

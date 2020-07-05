@@ -7,25 +7,28 @@ import org.json.JSONObject;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 public class InputOutWhen implements IAlgorithm {
 
     private static final Logger logger = LogManager.getLogger();
     @Override
-    public void Init(JSONObject args) {
-        if(logger.isDebugEnabled()) {
-            logger.debug(args.toString());
+    public void Init(Map args) {
+        if (logger.isDebugEnabled()) {
+            logger.debug(new JSONObject((args)).toString());
         }
     }
 
     @Override
-    public JSONObject Start(Collection input, IHKubeAPI hkubeAPI) throws Exception {
+    public Map Start(Map algs, IHKubeAPI hkubeAPI) throws Exception {
         if (logger.isDebugEnabled()) {
-            logger.debug(input.toString());
+            logger.debug(algs.toString());
         }
-        JSONObject output = new JSONObject();
+        Map output = new HashMap();
         output.put("prevInput", new Date().toString());
         String index0 = null;
+        Collection input = (Collection)algs.get("input");
         try {if(input.size()>0)
             index0 = input.iterator().next().toString();
         } catch (Exception e) {

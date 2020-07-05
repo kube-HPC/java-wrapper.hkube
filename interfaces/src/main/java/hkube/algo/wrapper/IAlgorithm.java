@@ -5,11 +5,12 @@ import org.json.JSONObject;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.Map;
 
 public interface IAlgorithm {
-    void Init(JSONObject args);
+    void Init(Map args);
 
-    JSONObject Start(Collection input, IHKubeAPI hkubeAPI) throws Exception;
+    Map Start(Map input, IHKubeAPI hkubeAPI) throws Exception;
 
     void Stop();
     void Cleanup();

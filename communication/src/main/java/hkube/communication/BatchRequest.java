@@ -5,10 +5,7 @@ import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeoutException;
 
 public class BatchRequest extends DataRequest {
@@ -27,19 +24,22 @@ public class BatchRequest extends DataRequest {
             map.put("tasks", tasks);
         }
         Object decoded = encoder.decode(requestAdapter.send(encoder.encodeNoHeader(map)));
-        JSONObject result = (JSONObject) toJSON(decoded);
+
         if (logger.isDebugEnabled()) {
+            JSONObject result = (JSONObject) toJSON(decoded);
             logger.debug(result);
         }
         Map reslutMap = new HashMap<>();
-        if (result instanceof JSONObject) {
-            if (result.has("hkube_error")) {
+
+        if (decoded instanceof Map) {
+            Map result = (Map) decoded;
+            if (result.get("hkube_error") != null) {
                 logger.warn(result.toString());
                 throw new RuntimeException(result.toString());
             }
-            if (result.has("errors") && result.getString("errors").equalsIgnoreCase("true")) {
-                if (result.has("items")) {
-                    JSONArray items = result.getJSONArray("items");
+            if (result.get("errors") != null && result.get("errors").equals("true")) {
+                if (result.get("items")!=null) {
+                    Collection items = (Collection) result.get("items");
                     Iterator itemIterator = items.iterator();
                     int i = 0;
                     while (itemIterator.hasNext()) {

@@ -5,30 +5,28 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 public class InputOutput implements IAlgorithm {
 
     private static final Logger logger = LogManager.getLogger();
 
     @Override
-    public void Init(JSONObject args) {
+    public void Init(Map args) {
         if (logger.isDebugEnabled()) {
-            logger.debug(args.toString());
+            logger.debug(new JSONObject((args)).toString());
         }
     }
 
 
     @Override
-    public JSONObject Start(Collection input, IHKubeAPI hkubeAPI) throws Exception {
+    public Map Start(Map args, IHKubeAPI hkubeAPI) throws Exception {
         if (logger.isDebugEnabled()) {
-            logger.debug(input.toString());
+            logger.debug(args.toString());
         }
 
         List outputList = new ArrayList();
+        Collection input = (Collection)args.get("input");
         input.stream().forEach(item -> {
             if (item instanceof ByteBuffer) {
                 byte[] arr = new byte[((ByteBuffer) item).remaining()];
@@ -36,7 +34,7 @@ public class InputOutput implements IAlgorithm {
                 outputList.add(arr);
             } else outputList.add(item);
         });
-        JSONObject output = new JSONObject();
+        Map output = new HashMap();
         output.put("prevInput", outputList);
         String index0 = null;
         try {

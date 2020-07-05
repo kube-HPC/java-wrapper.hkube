@@ -12,17 +12,17 @@ public class Algorithm implements IAlgorithm {
 
 
     @Override
-    public void Init(JSONObject args) {
+    public void Init(Map args) {
 
     }
 
     @Override
-    public JSONObject Start(Collection input, IHKubeAPI hkubeAPI) throws Exception {
+    public Map Start(Map input, IHKubeAPI hkubeAPI) throws Exception {
         Map<String, Object> data = new HashMap<>();
         data.put("myAnswer", 33);
         data.put("mirror", input);
       //  JSONObject result =  hkubeAPI.startAlgorithm("green-alg",new JSONArray(),false);
-        JSONObject simpleInput = new JSONObject();
+        Map simpleInput = new HashMap();
         Map files = new HashMap();
         files.put("link","mylink");
         simpleInput.put("files",files);

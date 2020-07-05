@@ -22,7 +22,7 @@ public class HKubeAPITest {
             CommandResponseListener listener;
 
             @Override
-            public void sendMessage(String command, JSONObject data, boolean isError) {
+            public void sendMessage(String command, Map data, boolean isError) {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -31,7 +31,7 @@ public class HKubeAPITest {
                         Map storedResult =  new HashMap();
                         result.put("response", storedResult);
                         storedResult.put("storedResult", "5");
-                        listener.onCommand(Consts.subPipelineDone, new JSONObject(result));
+                        listener.onCommand(Consts.subPipelineDone, result);
                     }
                 }).start();
             }
@@ -42,12 +42,12 @@ public class HKubeAPITest {
             }
         },new DataAdapter(new WrapperConfig()){
             @Override
-            public Object getData(JSONObject single, String jobId) {
+            public Object getData(Map single, String jobId) {
                 return single;
             }
         });
-        JSONObject result = api.startStoredPipeLine("pipeName", new JSONObject());
-        assert ((JSONObject)result.get("response")).get("storedResult") == "5";
+        Map result = api.startStoredPipeLine("pipeName", new JSONObject());
+        assert ((Map)result.get("response")).get("storedResult") == "5";
     }
 
     @Test
@@ -56,7 +56,7 @@ public class HKubeAPITest {
             CommandResponseListener listener;
 
             @Override
-            public void sendMessage(String command, JSONObject data, boolean isError) {
+            public void sendMessage(String command, Map data, boolean isError) {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -65,7 +65,7 @@ public class HKubeAPITest {
                         Map rawResult =  new HashMap();
                         rawResult.put("rawResult", "2");
                         result.put("response",rawResult);
-                        listener.onCommand(Consts.subPipelineDone, new JSONObject(result));
+                        listener.onCommand(Consts.subPipelineDone, result);
                     }
                 }).start();
             }
@@ -76,13 +76,13 @@ public class HKubeAPITest {
             }
         },new DataAdapter(new WrapperConfig()){
             @Override
-            public Object getData(JSONObject single, String jobId) {
+            public Object getData(Map single, String jobId) {
                 return single;
             }
         });
 
-        JSONObject result = api.startRawSubPipeLine("pipeName", new INode[]{}, new JSONObject(), null, null);
-        assert ((JSONObject)result.get("response")).get("rawResult") == "2";
+        Map result = api.startRawSubPipeLine("pipeName", new INode[]{}, new JSONObject(), null, null);
+        assert ((Map)result.get("response")).get("rawResult") == "2";
     }
     @Test
     public void asyncTest() throws ExecutionException, InterruptedException {
@@ -90,7 +90,7 @@ public class HKubeAPITest {
             CommandResponseListener listener;
 
             @Override
-            public void sendMessage(String command, JSONObject data, boolean isError) {
+            public void sendMessage(String command, Map data, boolean isError) {
                 if (command.equals(Consts.startRawSubPipeline)) {
                     new Thread(new Runnable() {
                         @Override
@@ -100,7 +100,7 @@ public class HKubeAPITest {
                             Map rawResult =  new HashMap();
                             result.put("response", rawResult);
                             rawResult.put("rawResult", "2");
-                            listener.onCommand(Consts.subPipelineDone, new JSONObject(result));
+                            listener.onCommand(Consts.subPipelineDone, result);
                         }
                     }).start();
                 }
@@ -113,7 +113,7 @@ public class HKubeAPITest {
                             Map algoResult =  new HashMap();
                             result.put("response", algoResult);
                             algoResult.put("algoResult", "3");
-                            listener.onCommand(Consts.algorithmExecutionDone, new JSONObject(result));
+                            listener.onCommand(Consts.algorithmExecutionDone,result);
                         }
                     }).start();
                 }
@@ -125,18 +125,18 @@ public class HKubeAPITest {
             }
         },new DataAdapter(new WrapperConfig()){
             @Override
-            public Object getData(JSONObject single, String jobId) {
+            public Object getData(Map single, String jobId) {
                 return single;
             }
         });
         Future rawResult = api.startRawSubPipeLineAsynch("pipeName", new INode[]{}, new JSONObject(), null, null);
         Future algoReslut = api.startAlgorithmAsynch("algName",new JSONArray(),false);
         while(!rawResult.isDone()) Thread.sleep(200);
-        JSONObject result = (JSONObject) rawResult.get();
-        assert ((JSONObject)result.get("response")).get("rawResult") == "2";
+        Map result = (Map) rawResult.get();
+        assert ((Map)result.get("response")).get("rawResult") == "2";
         while(!algoReslut.isDone()) Thread.sleep(200);
-        result = (JSONObject) algoReslut.get();
-        assert ((JSONObject)result.get("response")).get("algoResult") == "3";
+        result = (Map) algoReslut.get();
+        assert ((Map)result.get("response")).get("algoResult") == "3";
 
     }
 }

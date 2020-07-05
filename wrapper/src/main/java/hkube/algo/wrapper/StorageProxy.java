@@ -35,7 +35,7 @@ public class StorageProxy {
         }
         return result;
     }
-    public Object getInputParamFromStorage(JSONObject storageInfo, String path) {
+    public Object getInputParamFromStorage(Map storageInfo, String path) {
         String storageFullPath = (String) storageInfo.get("path");
         Object value;
         try {

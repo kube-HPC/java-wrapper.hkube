@@ -2,13 +2,9 @@ package hkube.communication;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeoutException;
 
 public class SingleRequest extends DataRequest {
@@ -28,34 +24,35 @@ public class SingleRequest extends DataRequest {
             map.put("tasks", tasks);
         }
         Object decoded = encoder.decode(requestAdapter.send(encoder.encodeNoHeader(map)));
-        Object result = toJSON(decoded);
+
         if (logger.isDebugEnabled()) {
+            Object result = toJSON(decoded);
             logger.debug(result);
         }
-        if(result instanceof JSONObject){
-            JSONObject jsonObjectResult = (JSONObject) result;
-            if (jsonObjectResult.has("hkube_error")) {
+        if(decoded instanceof Map){
+            Map result = (Map)decoded;
+                if (result.get("hkube_error")!=null) {
                 logger.warn(result.toString());
-                throw new RuntimeException(jsonObjectResult.toString());
+                throw new RuntimeException(result.toString());
             }
             if (tasks != null ){
-                if(jsonObjectResult.has("errors") && jsonObjectResult.getBoolean("errors")==true){
-                    if(jsonObjectResult.has("items")){
-                        JSONArray items = jsonObjectResult.getJSONArray("items");
+                if(result.get("errors")!=null && (Boolean) result.get("errors")==true){
+                    if(result.get("items")!=null){
+                        Collection items = (Collection)result.get("items");
                         Iterator itemIterator = items.iterator();
                         Map listResult = new HashMap<>();
                         int i=0;
-                        while(itemIterator.hasNext()){
+                       while(itemIterator.hasNext()){
                             Object currentItem = itemIterator.next();
                             if(currentItem instanceof JSONObject && !((JSONObject) currentItem).has("hkube_error")){
                                 listResult.put(tasks.get(i),currentItem);
                             }
                         }
-                        result = listResult;
+                        decoded = listResult;
                     }
                 }
             }
         }
-        return result;
+        return decoded;
     }
 }

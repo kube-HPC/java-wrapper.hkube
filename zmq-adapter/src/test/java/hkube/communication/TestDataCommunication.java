@@ -44,7 +44,7 @@ public class TestDataCommunication {
         DataRequest request = new SingleRequest(zmqr,"taskId1","level1.level2","msgpack");
         Object result = request.send();
         request.close();
-        assert ((JSONObject)result).get("value2").equals("d2_l1_l2_value_2");
+        assert ((Map)result).get("value2").equals("d2_l1_l2_value_2");
         byte[] data2 = new byte[200];
         data2[1]=5;
         data2[2]=6;
@@ -61,7 +61,8 @@ public class TestDataCommunication {
         zmqr = new ZMQRequest("localhost", conf.getListeningPort(), conf);
         request = new SingleRequest(zmqr,"taskId1",null,"msgpack");
         result= request.send();
-        assert ((JSONObject)result).query("/level1/value1").equals("d2_l1_value_1");
+        JSONObject resultAsJson = new JSONObject((Map)result);
+        assert resultAsJson.query("/level1/value1").equals("d2_l1_value_1");
     }
 
     public JSONObject parseJSON(String filename) throws JSONException, IOException, URISyntaxException {
