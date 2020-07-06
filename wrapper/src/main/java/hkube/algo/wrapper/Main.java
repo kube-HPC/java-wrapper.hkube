@@ -28,7 +28,7 @@ class Main {
         logger.debug("debug logging enabled");
         try {
             if (args.length < 1) {
-                throw new RuntimeException("Must provide an argument pointing to Algorithm jar location");
+                throw new RuntimeException("Must provide a program argument pointing to an Algorithm jar location.\n If you are trying to debug locally and you added the Algorithm to the class path manually, please put the word 'debug' as a program argument");
             }
             URLClassLoader ucl;
             if (!args[0].equals("debug")) {
