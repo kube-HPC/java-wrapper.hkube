@@ -22,12 +22,13 @@ public class HKubeAPITest {
             CommandResponseListener listener;
 
             @Override
-            public void sendMessage(String command, Map data, boolean isError) {
+            public void sendMessage(String command, Object data, boolean isError) {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
+                        Map dataMap = (Map)data;
                         Map result = new HashMap();
-                        result.put(Consts.subPipelineId, data.get(Consts.subPipelineId));
+                        result.put(Consts.subPipelineId, dataMap.get(Consts.subPipelineId));
                         Map storedResult =  new HashMap();
                         result.put("response", storedResult);
                         storedResult.put("storedResult", "5");
@@ -56,12 +57,13 @@ public class HKubeAPITest {
             CommandResponseListener listener;
 
             @Override
-            public void sendMessage(String command, Map data, boolean isError) {
+            public void sendMessage(String command, Object data, boolean isError) {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
+                        Map dataMap = (Map)data;
                         Map result = new HashMap();
-                        result.put(Consts.subPipelineId, data.get(Consts.subPipelineId));
+                        result.put(Consts.subPipelineId, dataMap.get(Consts.subPipelineId));
                         Map rawResult =  new HashMap();
                         rawResult.put("rawResult", "2");
                         result.put("response",rawResult);
@@ -90,13 +92,14 @@ public class HKubeAPITest {
             CommandResponseListener listener;
 
             @Override
-            public void sendMessage(String command, Map data, boolean isError) {
+            public void sendMessage(String command, Object data, boolean isError) {
                 if (command.equals(Consts.startRawSubPipeline)) {
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
+                            Map dataMap = (Map)data;
                             Map result = new HashMap();
-                            result.put(Consts.subPipelineId, data.get(Consts.subPipelineId));
+                            result.put(Consts.subPipelineId, dataMap.get(Consts.subPipelineId));
                             Map rawResult =  new HashMap();
                             result.put("response", rawResult);
                             rawResult.put("rawResult", "2");
@@ -108,8 +111,9 @@ public class HKubeAPITest {
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
+                            Map dataMap = (Map)data;
                             Map result = new HashMap();
-                            result.put(Consts.execId, data.get(Consts.execId));
+                            result.put(Consts.execId, dataMap.get(Consts.execId));
                             Map algoResult =  new HashMap();
                             result.put("response", algoResult);
                             algoResult.put("algoResult", "3");

@@ -128,7 +128,7 @@ public class Wrapper implements ICommandSender {
         logger.error("closing websocket" + error);
     }
 
-    public void sendMessage(String command, Map data, boolean isError) {
+    public void sendMessage(String command, Object data, boolean isError) {
         logger.info("Sending message to worker: " + command);
         Map<String, Object> toSend = new HashMap();
         toSend.put("command", command);
@@ -169,10 +169,10 @@ public class Wrapper implements ICommandSender {
 
     }
 
-    private void onMessage(Map msgAsJson) {
+    private void onMessage(Map msgAsMap) {
         try {
-            String command = (String) msgAsJson.get("command");
-            Map data = (Map)msgAsJson.get("data");
+            String command = (String) msgAsMap.get("command");
+            Map data = (Map)msgAsMap.get("data");
             listeners.forEach(listener -> {
                 listener.onCommand(command, data);
             });
@@ -202,7 +202,7 @@ public class Wrapper implements ICommandSender {
                                     logger.debug("input data after decoding " + input);
                                 }
                                 logger.debug("Before running algorithm");
-                                Map res;
+                                Object res;
                                 res = mAlgorithm.Start( mArgs, hkubeAPI);
                                 logger.debug("After running algorithm");
                                 String taskId = (String) mArgs.get("taskId");

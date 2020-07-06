@@ -7,13 +7,14 @@ import hkube.encoding.EncodingManager;
 import hkube.storage.StorageFactory;
 import hkube.storage.TaskStorage;
 
+import org.apache.commons.jxpath.JXPathContext;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import hkube.communication.zmq.ZMQRequest;
-import org.json.JSONObject;
 
-
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -83,19 +84,23 @@ public class DataAdapter {
             return results.values();
         }
 
-        Collection jsonArray = (Collection) args.get("input");
-        Iterator iterator = jsonArray.iterator();
-        Collection jsonObjects = new ArrayList();
+        Collection originalInput = (Collection) args.get("input");
+        Iterator iterator = originalInput.iterator();
+        Collection inputList = new ArrayList();
         while (iterator.hasNext()) {
-            jsonObjects.add(iterator.next());
+            Object value = iterator.next();
+            if(value instanceof  byte[]){
+                value = ByteBuffer.wrap((byte[]) value);
+            }
+            inputList.add(value);
         }
-        return jsonObjects;
+        return inputList;
     }
 
     public Object getData(Map single, String jobId) {
         Object value = null;
         final String path;
-        if (single.get("path")!= null) {
+        if (single.get("path") != null) {
             path = (String) single.get("path");
         } else {
             path = "";
@@ -104,7 +109,7 @@ public class DataAdapter {
         List<String> tasks = null;
 
 
-        if (single.get("discovery")!= null) {
+        if (single.get("discovery") != null) {
 
             Map discovery = (Map) single.get("discovery");
             String host = (String) discovery.get("host");
@@ -112,7 +117,7 @@ public class DataAdapter {
             ZMQRequest zmqr = new ZMQRequest(host, port, config.commConfig);
             SingleRequest singleRequest = null;
             BatchRequest batchRequest = null;
-            if (single.get("tasks")!= null) {
+            if (single.get("tasks") != null) {
                 //batch with discovery
                 tasks = getStringListFromJSONArray((Collection) single.get("tasks"));
                 batchRequest = new BatchRequest(zmqr, tasks, path, config.commConfig.getEncodingType());
@@ -136,7 +141,7 @@ public class DataAdapter {
             }
         }
         if (value == null) {
-            if (single.get("storageInfo")!= null) {
+            if (single.get("storageInfo") != null) {
                 Map storageInfo = (Map) single.get("storageInfo");
                 value = storageProxy.getInputParamFromStorage(storageInfo, path);
             } else {
@@ -151,23 +156,39 @@ public class DataAdapter {
     }
 
 
-    Map getMetadata(Collection savePaths, Map result) {
+    public static Map getMetadata(Collection savePaths, Object result) {
         Iterator<Object> pathsIterator = savePaths.iterator();
         Map metadata = new HashMap();
         while (pathsIterator.hasNext()) {
             String path = (String) pathsIterator.next();
-            String nodeName = new StringTokenizer(path, ".").nextToken();
-            String relativePath = path.replaceFirst(nodeName, "");
-            relativePath = relativePath.replaceAll("\\.", "/");
+            StringTokenizer tokenizer = new StringTokenizer(path, ".");
+            String relativePath = "";
+            String nodeName = tokenizer.nextToken();
+            while (tokenizer.hasMoreElements()) {
+                String nextToken = tokenizer.nextToken();
+                if (StringUtils.isNumeric(nextToken)) {
+                    nextToken = "[" + nextToken + "]";
+                    relativePath = relativePath + nextToken;
+                } else {
+                    relativePath = relativePath + "/" + nextToken;
+                }
+            }
             try {
-                Object value = new JSONObject(result).query(relativePath);
-
+                Object value;
+                if (result instanceof Map) {
+                    value = JXPathContext.newContext(result).getValue(relativePath);
+                } else {
+                    value = result;
+                }
                 String type;
                 Map meta = new HashMap();
                 if (value instanceof Integer || value instanceof Long || value instanceof Double) {
                     type = "number";
                 } else if (value instanceof String) {
                     type = "string";
+                } else if (value instanceof byte[]) {
+                    type = "bytearray";
+                    meta.put("size", (((byte[]) value).length));
                 } else if (value instanceof Collection) {
                     type = "array";
                     meta.put("size", (((Collection) value).size()));
@@ -186,7 +207,7 @@ public class DataAdapter {
         return metadata;
     }
 
-    byte[] encode(Map toBeEncoded, String encodingType) {
+    byte[] encode(Object toBeEncoded, String encodingType) {
         byte[] encodedBytes = new EncodingManager(encodingType).encode(toBeEncoded);
         return encodedBytes;
     }
@@ -214,7 +235,7 @@ public class DataAdapter {
     public static List<String> getStringListFromJSONArray(Collection array) {
         ArrayList<String> jsonObjects = new ArrayList<>();
         Iterator iterator = array.iterator();
-        while(iterator.hasNext())
+        while (iterator.hasNext())
             jsonObjects.add(iterator.next().toString());
         return jsonObjects;
     }
