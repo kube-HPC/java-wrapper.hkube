@@ -61,6 +61,5 @@ class Main {
         } catch (InvocationTargetException ex) {
             logger.error(ex);
         }
-        System.out.println("Hello, World.");
     }
 }

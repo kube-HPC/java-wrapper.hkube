@@ -65,6 +65,9 @@ public class Wrapper implements ICommandSender {
         if (uriString == null) {
             uriString = "ws://" + mConfig.getHost() + ":" + mConfig.getPort() + "/?storage=" + mConfig.getStorageVersion() + "&encoding=" + mConfig.getEncodingType();
         }
+        else {
+            uriString = uriString+"?encoding="+ mConfig.getEncodingType();
+        }
         try {
             logger.info("connecting to uri: " + uriString);
 
