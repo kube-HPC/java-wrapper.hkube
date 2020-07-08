@@ -37,20 +37,19 @@ public class BatchRequest extends DataRequest {
                 logger.warn(result.toString());
                 throw new RuntimeException(result.toString());
             }
-            if (result.get("errors") != null && result.get("errors").equals("true")) {
-                if (result.get("items")!=null) {
-                    Collection items = (Collection) result.get("items");
-                    Iterator itemIterator = items.iterator();
-                    int i = 0;
-                    while (itemIterator.hasNext()) {
-                        Object currentItem = itemIterator.next();
-                        if (currentItem instanceof JSONObject && !((JSONObject) currentItem).has("hkube_error")) {
-                            reslutMap.put(tasks.get(i), currentItem);
-                        }
-                    }
 
+            if (result.get("items")!=null) {
+                Collection items = (Collection) result.get("items");
+                Iterator itemIterator = items.iterator();
+                int i = 0;
+                while (itemIterator.hasNext()) {
+                    Object currentItem = itemIterator.next();
+                    if (currentItem instanceof Map && (((Map)currentItem).get("hkube_error")==null)) {
+                        reslutMap.put(tasks.get(i), currentItem);
+                    }
                 }
             }
+
         }
         return reslutMap;
     }

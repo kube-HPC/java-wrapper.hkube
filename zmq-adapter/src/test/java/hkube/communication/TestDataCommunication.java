@@ -13,7 +13,9 @@ import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
@@ -64,6 +66,24 @@ public class TestDataCommunication {
         JSONObject resultAsJson = new JSONObject((Map)result);
         assert resultAsJson.query("/level1/value1").equals("d2_l1_value_1");
     }
+
+    @Test
+    public void getBatch() throws IOException, URISyntaxException, TimeoutException {
+        CommConfig conf = new CommConfig();
+        server = new ZMQServer(conf);
+        DataServer ds = new DataServer(server,conf);
+        JSONObject data1 = parseJSON("data1.json");
+        ds.addTaskData("taskId1",data1);
+        ZMQRequest zmqr = new ZMQRequest("localhost", conf.getListeningPort(), conf);
+        List tasks = new ArrayList();
+        tasks.add("taskId1");
+        BatchRequest request = new BatchRequest(zmqr,tasks,"level1.level2","msgpack");
+        Map result = request.send();
+        request.close();
+        assert ((Map)result.get("taskId1")).get("value2").equals("d2_l1_l2_value_2");
+
+    }
+
 
     public JSONObject parseJSON(String filename) throws JSONException, IOException, URISyntaxException {
         String content = new String(Files.readAllBytes(Paths.get(getClass().getClassLoader()

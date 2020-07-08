@@ -1,6 +1,7 @@
 package hkube.algo.wrapper;
 
 import hkube.storage.TaskStorage;
+import org.apache.commons.jxpath.JXPathContext;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -8,6 +9,7 @@ import org.json.JSONObject;
 import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.StringTokenizer;
 
 public class StorageProxy {
     HashMap cache = new HashMap();
@@ -35,6 +37,7 @@ public class StorageProxy {
         }
         return result;
     }
+
     public Object getInputParamFromStorage(Map storageInfo, String path) {
         String storageFullPath = (String) storageInfo.get("path");
         Object value;
@@ -48,7 +51,7 @@ public class StorageProxy {
         return value;
     }
 
-   public  Object getInputParamFromStorage(String jobId, String taskId, String path) {
+    public Object getInputParamFromStorage(String jobId, String taskId, String path) {
         Object value;
         try {
             Object storedData = get(jobId, taskId);
@@ -62,22 +65,22 @@ public class StorageProxy {
 
     private Object getSpecificData(Object storedData, String path) {
         Object value;
-        if (storedData instanceof Map) {
-            JSONObject storedDataJson = new JSONObject((Map) storedData);
-            if (path.length() > 0) {
-                String[] strArray = path.split("\\.");
-                String lastToken = strArray[strArray.length - 1];
-                Integer index = null;
-                if (StringUtils.isNumeric(lastToken)) {
-                    index = Integer.valueOf(lastToken);
-                    path = path.replace("." + lastToken, "");
+        if (path.length() > 0) {
+            StringTokenizer tokenizer = new StringTokenizer(path, ".");
+            String relativePath = "";
+            while (tokenizer.hasMoreElements()) {
+                String nextToken = tokenizer.nextToken();
+                if (StringUtils.isNumeric(nextToken)) {
+                    nextToken = "[" + nextToken + "]";
+                    relativePath = relativePath + nextToken;
+                } else {
+                    relativePath = relativePath + "/" + nextToken;
                 }
-                value = storedDataJson.query("/" + path.replaceAll("\\.", "/"));
-                if (index != null) {
-                    value = ((JSONArray) value).get(index);
-                }
+            }
+            if (storedData instanceof Map && relativePath.length() > 0) {
+                value = JXPathContext.newContext(storedData).getValue(relativePath);
             } else {
-                value = storedDataJson;
+                value = storedData;
             }
         } else {
             value = storedData;

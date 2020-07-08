@@ -130,7 +130,7 @@ public class DataAdapter {
                     value = singleRequest.send();
                 else {
                     Map batchReslut = batchRequest.send();
-                    List<String> missingTasks = tasks.stream().filter(taskId -> batchReslut.containsKey(taskId)).collect(Collectors.toList());
+                    List<String> missingTasks = tasks.stream().filter(taskId -> !batchReslut.containsKey(taskId)).collect(Collectors.toList());
                     value = missingTasks.stream().map((taskId) -> storageProxy.getInputParamFromStorage(jobId, taskId, path)).collect(Collectors.toList());
                     ((Collection) value).addAll(batchReslut.values());
                 }
@@ -175,7 +175,7 @@ public class DataAdapter {
             }
             try {
                 Object value;
-                if (result instanceof Map) {
+                if (result instanceof Map && relativePath.length()>0) {
                     value = JXPathContext.newContext(result).getValue(relativePath);
                 } else {
                     value = result;

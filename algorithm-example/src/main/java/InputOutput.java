@@ -37,17 +37,17 @@ public class InputOutput implements IAlgorithm {
         Map output = new HashMap();
         output.put("prevInput", outputList);
         String index0 = null;
-        try {
-            if (input.size() > 0)
-                index0 = input.iterator().next().toString();
-        } catch (Exception e) {
-
-        }
-        if (input.size() > 1 && index0 != null && index0.equals("b")) {
-            Integer numberOfbytes = Integer.valueOf(input.iterator().next().toString());
-            byte[] myBytes = new byte[numberOfbytes];
-            output.put("addedBytes", myBytes);
-        }
+//        try {
+//            if (input.size() > 0)
+//                index0 = input.iterator().next().toString();
+//        } catch (Exception e) {
+//
+//        }
+//        if (input.size() > 1 && index0 != null && index0.equals("b")) {
+//            Integer numberOfbytes = Integer.valueOf(input.iterator().next().toString());
+//            byte[] myBytes = new byte[numberOfbytes];
+//            output.put("addedBytes", myBytes);
+//        }
         return output;
 
     }
