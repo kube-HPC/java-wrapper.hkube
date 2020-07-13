@@ -11,7 +11,6 @@ import hkube.storage.TaskStorage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.glassfish.tyrus.client.ClientManager;
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import javax.websocket.*;

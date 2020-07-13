@@ -41,7 +41,7 @@ public class TestDataCommunication {
         server = new ZMQServer(conf);
         DataServer ds = new DataServer(server,conf);
         JSONObject data1 = parseJSON("data1.json");
-        ds.addTaskData("taskId1",data1);
+        ds.addTaskData("taskId1",data1.toMap());
         ZMQRequest zmqr = new ZMQRequest("localhost", conf.getListeningPort(), conf);
         DataRequest request = new SingleRequest(zmqr,"taskId1","level1.level2","msgpack");
         Object result = request.send();
@@ -73,7 +73,7 @@ public class TestDataCommunication {
         server = new ZMQServer(conf);
         DataServer ds = new DataServer(server,conf);
         JSONObject data1 = parseJSON("data1.json");
-        ds.addTaskData("taskId1",data1);
+        ds.addTaskData("taskId1",data1.toMap());
         ZMQRequest zmqr = new ZMQRequest("localhost", conf.getListeningPort(), conf);
         List tasks = new ArrayList();
         tasks.add("taskId1");

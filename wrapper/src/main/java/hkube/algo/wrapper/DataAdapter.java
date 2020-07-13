@@ -17,6 +17,7 @@ import hkube.communication.zmq.ZMQRequest;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class DataAdapter {
@@ -88,7 +89,7 @@ public class DataAdapter {
                 }
             }
             ;
-            return (Collection) getAsArray(results);
+            return (Collection) getAsArray(results,args.get("input"));
         }
 
         Collection originalInput = (Collection) args.get("input");
@@ -104,19 +105,27 @@ public class DataAdapter {
         return inputList;
     }
 
-    private Object getAsArray(Map<String, Object> results) {
+    private Object getAsArray(Map<String, Object> results,Object originalInput) {
+        AtomicInteger index = new AtomicInteger();
         results.entrySet().stream().forEach(entry -> {
+            Object next;
             if (entry.getValue() instanceof Map) {
-                results.put(entry.getKey(), getAsArray((Map) entry.getValue()));
+                if(originalInput instanceof Map){
+                    next = ((Map) originalInput).get(entry.getKey());
+                }
+                else {
+                   next =  ((List)originalInput).get(index.get());
+                }
+                results.put(entry.getKey(), getAsArray((Map) entry.getValue(),next));
+                index.getAndIncrement();
             }
         });
-        if (results.keySet().stream().anyMatch(key -> StringUtils.isNumeric(key))) {
+        if (originalInput instanceof Collection) {
             return results.values();
         }
         else{
             return results;
         }
-
     }
 
     public Object getData(Map single, String jobId) {
