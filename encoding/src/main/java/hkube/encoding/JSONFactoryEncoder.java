@@ -1,4 +1,5 @@
 package hkube.encoding;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hkube.utils.Timing;
 import org.apache.logging.log4j.LogManager;
@@ -8,14 +9,17 @@ import com.fasterxml.jackson.core.JsonFactory;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Map;
+import java.util.Set;
 
 
-public abstract class JSONFactoryEncoder extends BaseEncoder implements IEncoder{
+public abstract class JSONFactoryEncoder extends BaseEncoder implements IEncoder {
     final static int DATA_TYPE_ENCODED = 3;
     private final Logger logger = LogManager.getLogger(this.getClass());
     private final JsonFactory factory;
 
-    JSONFactoryEncoder(JsonFactory factory){
+    JSONFactoryEncoder(JsonFactory factory) {
         this.factory = factory;
     }
 
@@ -26,10 +30,10 @@ public abstract class JSONFactoryEncoder extends BaseEncoder implements IEncoder
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ObjectMapper objectMapper = new ObjectMapper(factory);
         try {
-            out.write(createHeader(!(obj instanceof  byte[])));
-            if(obj instanceof  byte[]) {
+            out.write(createHeader(!(obj instanceof byte[])));
+            if (obj instanceof byte[]) {
                 out.write((byte[]) obj);
-            }else {
+            } else {
                 out.write(objectMapper.writeValueAsBytes(obj));
             }
         } catch (IOException e) {
@@ -66,6 +70,7 @@ public abstract class JSONFactoryEncoder extends BaseEncoder implements IEncoder
         ObjectMapper objectMapper = new ObjectMapper(factory);
         try {
             Object result = objectMapper.readValue(encodedDataStream, Object.class);
+            byteToByteBuffer(result);
             timing.end();
             timing.logInfo();
             return result;
@@ -75,6 +80,44 @@ public abstract class JSONFactoryEncoder extends BaseEncoder implements IEncoder
         }
 
     }
+
+
+    private void bufferToBytes(Object obj) {
+        if (obj instanceof Map) {
+            Set keys = ((Map) obj).keySet();
+            keys.stream().forEach(key -> {
+                Object value = ((Map) obj).get(key);
+                if(value instanceof Map){
+                    bufferToBytes(value);
+                }
+                if(value instanceof ByteBuffer){
+                    if(((ByteBuffer) value).position()==0 && ((ByteBuffer) value).capacity()== ((ByteBuffer) value).array().length) {
+                        ((Map) obj).put(key, ((ByteBuffer) value).array());
+                    }
+                    else{
+                        byte[] byteArr = new byte[((ByteBuffer) value).remaining()];
+                        ((ByteBuffer) value).get(byteArr);
+                        ((Map) obj).put(key,byteArr);
+                    }
+                }
+            });
+        }
+    }
+    private void byteToByteBuffer(Object obj) {
+        if (obj instanceof Map) {
+            Set keys = ((Map) obj).keySet();
+            keys.stream().forEach(key -> {
+                Object value = ((Map) obj).get(key);
+                if(value instanceof Map){
+                    byteToByteBuffer(value);
+                }
+                if(value instanceof byte[]){
+                    ((Map) obj).put(key,ByteBuffer.wrap((byte[])value));
+                }
+            });
+        }
+    }
+
     @Override
     public Object decodeNoHeader(byte[] data) {
         Timing timing = new Timing(logger, "decode");

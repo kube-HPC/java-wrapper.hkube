@@ -6,9 +6,9 @@ import hkube.communication.SingleRequest;
 import hkube.encoding.EncodingManager;
 import hkube.storage.StorageFactory;
 import hkube.storage.TaskStorage;
-
-import org.apache.commons.jxpath.JXPathContext;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.jxpath.JXPathContext;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -50,12 +50,15 @@ public class DataAdapter {
                     value = dataReference;
                     String key = entry.getKey();
                     String[] keyParts = key.split("\\.");
-                    if (keyParts.length > 1) {
-                        Map tempValue = new HashMap();
-                        tempValue.put(keyParts[1], value);
-                        value = tempValue;
+                    Map tempValue = results;
+                    for (int i = 0; i < keyParts.length - 1; i++) {
+                        Map partMap = (Map) tempValue.get(keyParts[i]);
+                        if (partMap == null) {
+                            tempValue.put(keyParts[i], new HashMap<>());
+                        }
+                        tempValue = (Map) tempValue.get(keyParts[i]);
                     }
-                    results.put(entry.getKey(), value);
+                    tempValue.put(keyParts[keyParts.length - 1], value);
                 } else {
                     dataReference = ((String) dataReference).substring(2);
                     Object item = storage.get((String) dataReference);
@@ -73,15 +76,19 @@ public class DataAdapter {
                     }
                     String key = entry.getKey();
                     String[] keyParts = key.split("\\.");
-                    if (keyParts.length > 1) {
-                        Map tempValue = new HashMap();
-                        tempValue.put(keyParts[1], value);
-                        value = tempValue;
+                    Map tempValue = results;
+                    for (int i = 0; i < keyParts.length - 1; i++) {
+                        Map partMap = (Map) tempValue.get(keyParts[i]);
+                        if (partMap == null) {
+                            tempValue.put(keyParts[i], new HashMap<>());
+                        }
+                        tempValue = (Map) tempValue.get(keyParts[i]);
                     }
-                    results.put(keyParts[0], value);
+                    tempValue.put(keyParts[keyParts.length - 1], value);
                 }
             }
-            return results.values();
+            ;
+            return (Collection) getAsArray(results);
         }
 
         Collection originalInput = (Collection) args.get("input");
@@ -89,12 +96,27 @@ public class DataAdapter {
         Collection inputList = new ArrayList();
         while (iterator.hasNext()) {
             Object value = iterator.next();
-            if(value instanceof  byte[]){
+            if (value instanceof byte[]) {
                 value = ByteBuffer.wrap((byte[]) value);
             }
             inputList.add(value);
         }
         return inputList;
+    }
+
+    private Object getAsArray(Map<String, Object> results) {
+        results.entrySet().stream().forEach(entry -> {
+            if (entry.getValue() instanceof Map) {
+                results.put(entry.getKey(), getAsArray((Map) entry.getValue()));
+            }
+        });
+        if (results.keySet().stream().anyMatch(key -> StringUtils.isNumeric(key))) {
+            return results.values();
+        }
+        else{
+            return results;
+        }
+
     }
 
     public Object getData(Map single, String jobId) {
@@ -175,7 +197,7 @@ public class DataAdapter {
             }
             try {
                 Object value;
-                if (result instanceof Map && relativePath.length()>0) {
+                if ((result instanceof Map || result instanceof Collection) && relativePath.length() > 0) {
                     value = JXPathContext.newContext(result).getValue(relativePath);
                 } else {
                     value = result;

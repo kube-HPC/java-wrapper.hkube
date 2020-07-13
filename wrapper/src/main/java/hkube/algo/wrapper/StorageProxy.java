@@ -7,6 +7,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.FileNotFoundException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -71,13 +72,16 @@ public class StorageProxy {
             while (tokenizer.hasMoreElements()) {
                 String nextToken = tokenizer.nextToken();
                 if (StringUtils.isNumeric(nextToken)) {
-                    nextToken = "[" + nextToken + "]";
+                    nextToken = "[" + (Integer.valueOf(nextToken)+1) + "]";
                     relativePath = relativePath + nextToken;
                 } else {
                     relativePath = relativePath + "/" + nextToken;
                 }
             }
-            if (storedData instanceof Map && relativePath.length() > 0) {
+            if ((storedData instanceof Map|| storedData instanceof Collection) && relativePath.length() > 0) {
+                if (relativePath.startsWith("[")){
+                    relativePath="."+relativePath;
+                }
                 value = JXPathContext.newContext(storedData).getValue(relativePath);
             } else {
                 value = storedData;

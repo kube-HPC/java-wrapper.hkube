@@ -1,9 +1,11 @@
 package hkube.communication;
 
+
 import hkube.encoding.EncodingManager;
 import hkube.encoding.IEncoder;
+import org.apache.commons.jxpath.JXPathContext;
 import org.json.JSONObject;
-
+import org.apache.commons.lang3.StringUtils;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
@@ -106,11 +108,11 @@ public class DataServer implements IRequestListener {
         } else {
 
             if (path != null && !path.equals("")) {
-                if (data instanceof JSONObject) {
+                if (data instanceof Map || data instanceof Collection) {
                     if(logger.isDebugEnabled()){
                         logger.debug("quering " + path +" from " + data);
                     }
-                    result = ((JSONObject) data).query("/" + path.replaceAll("\\.", "/"));
+                    result = getSpecificData(data,path);
                 } else {
                     result = createError("unknown", "Can't get data by path, data is not json");
                 }
@@ -123,6 +125,34 @@ public class DataServer implements IRequestListener {
         } else {
             return result;
         }
+    }
+
+    private Object getSpecificData(Object storedData, String path) {
+        Object value;
+        if (path.length() > 0) {
+            StringTokenizer tokenizer = new StringTokenizer(path, ".");
+            String relativePath = "";
+            while (tokenizer.hasMoreElements()) {
+                String nextToken = tokenizer.nextToken();
+                if (StringUtils.isNumeric(nextToken)) {
+                    nextToken = "[" + (Integer.valueOf(nextToken)+1) + "]";
+                    relativePath = relativePath + nextToken;
+                } else {
+                    relativePath = relativePath + "/" + nextToken;
+                }
+            }
+            if ((storedData instanceof Map|| storedData instanceof Collection) && relativePath.length() > 0) {
+                if (relativePath.startsWith("[")){
+                    relativePath="."+relativePath;
+                }
+                value = JXPathContext.newContext(storedData).getValue(relativePath);
+            } else {
+                value = storedData;
+            }
+        } else {
+            value = storedData;
+        }
+        return value;
     }
 
     private JSONObject createError(String code, String message) {

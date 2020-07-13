@@ -4,6 +4,7 @@ import hkube.encoding.JsonEncoder;
 import hkube.encoding.MSGPackEncoder;
 import org.junit.Test;
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -20,8 +21,11 @@ public class EncodingTest {
         byte[] mybytes = encoder.encode(rootMap);
         Map decodedObj = (Map)encoder.decode(mybytes);
         assert decodedObj.get("field1").equals(5);
-        assert decodedObj.get("field4").getClass().equals(byte[].class);
-        assert new String((byte[])decodedObj.get("field4")).equals("Hello");
+        assert decodedObj.get("field4") instanceof ByteBuffer;
+        ByteBuffer buffer = (ByteBuffer) decodedObj.get("field4");
+        byte [] bytes = new byte[buffer.remaining()];
+        buffer.get(bytes);
+        assert new String(bytes).equals("Hello");
     }
     @Test
     public void testEncodeDecodeBSON(){
@@ -35,8 +39,10 @@ public class EncodingTest {
         byte[] mybytes = encoder.encode(rootMap);
         Map decodedObj = (Map)encoder.decode(mybytes);
         assert decodedObj.get("field1").equals(5);
-        assert decodedObj.get("field4").getClass().equals(byte[].class);
-        assert new String((byte[])decodedObj.get("field4")).equals("Hello");
+        ByteBuffer buffer = (ByteBuffer) decodedObj.get("field4");
+        byte [] bytes = new byte[buffer.remaining()];
+        buffer.get(bytes);
+        assert new String(bytes).equals("Hello");
     }
     @Test
     public void testEncodeDecodeJSON(){
