@@ -9,6 +9,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -47,7 +48,7 @@ public class HKubeAPITest {
                 return single;
             }
         });
-        Map result = api.startStoredPipeLine("pipeName", new JSONObject());
+        Map result = api.startStoredPipeLine("pipeName", new HashMap());
         assert ((Map)result.get("response")).get("storedResult") == "5";
     }
 
@@ -83,7 +84,7 @@ public class HKubeAPITest {
             }
         });
 
-        Map result = api.startRawSubPipeLine("pipeName", new INode[]{}, new JSONObject(), null, null);
+        Map result = api.startRawSubPipeLine("pipeName", new INode[]{}, new HashMap(), null, null);
         assert ((Map)result.get("response")).get("rawResult") == "2";
     }
     @Test
@@ -133,8 +134,8 @@ public class HKubeAPITest {
                 return single;
             }
         });
-        Future rawResult = api.startRawSubPipeLineAsynch("pipeName", new INode[]{}, new JSONObject(), null, null);
-        Future algoReslut = api.startAlgorithmAsynch("algName",new JSONArray(),false);
+        Future rawResult = api.startRawSubPipeLineAsynch("pipeName", new INode[]{}, new HashMap(), null, null);
+        Future algoReslut = api.startAlgorithmAsynch("algName",new ArrayList(),false);
         while(!rawResult.isDone()) Thread.sleep(200);
         Map result = (Map) rawResult.get();
         assert ((Map)result.get("response")).get("rawResult") == "2";

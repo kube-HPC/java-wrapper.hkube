@@ -1,14 +1,11 @@
 package hkube.algo;
 
 import hkube.algo.wrapper.DataAdapter;
-import hkube.algo.wrapper.WrapperConfig;
 import hkube.api.IHKubeAPI;
 import hkube.api.INode;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 import java.util.*;
 import java.util.concurrent.ExecutionException;
@@ -29,7 +26,7 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
     }
 
     @Override
-    public Future<Map> startAlgorithmAsynch(String name, JSONArray input, boolean resultAsRaw) {
+    public Future<Map> startAlgorithmAsynch(String name, List input, boolean resultAsRaw) {
         APIExecutionFuture future = new APIExecutionFuture();
         String executionId = getExecutionId(future);
         Map data = new HashMap();
@@ -42,13 +39,13 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
     }
 
     @Override
-    public Map startAlgorithm(String name, JSONArray input, boolean resultAsRaw) {
+    public Map startAlgorithm(String name, List input, boolean resultAsRaw) {
         APIExecutionFuture future = (APIExecutionFuture) startAlgorithmAsynch(name, input, resultAsRaw);
         return returnWhenExecDone(future);
     }
 
     @Override
-    public Future<Map> startStoredPipeLineAsynch(String name, JSONObject flowInput) {
+    public Future<Map> startStoredPipeLineAsynch(String name, Map flowInput) {
         APIExecutionFuture future = new APIExecutionFuture();
         String executionId = getExecutionId(future);
         Map data = new HashMap();
@@ -62,13 +59,13 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
     }
 
     @Override
-    public Map startStoredPipeLine(String name, JSONObject flowInput) {
+    public Map startStoredPipeLine(String name, Map flowInput) {
         APIExecutionFuture future = (APIExecutionFuture) startStoredPipeLineAsynch(name, flowInput);
         return returnWhenExecDone(future);
     }
 
     @Override
-    public Future<Map> startRawSubPipeLineAsynch(String name, INode[] nodes, JSONObject flowInput, Map options, Map webhooks) {
+    public Future<Map> startRawSubPipeLineAsynch(String name, INode[] nodes, Map flowInput, Map options, Map webhooks) {
         APIExecutionFuture future = new APIExecutionFuture();
         String executionId;
         executionId = getExecutionId(future);
@@ -95,7 +92,7 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
     }
 
     @Override
-    public Map startRawSubPipeLine(String name, INode[] nodes, JSONObject flowInput, Map options, Map webhooks) {
+    public Map startRawSubPipeLine(String name, INode[] nodes, Map flowInput, Map options, Map webhooks) {
         APIExecutionFuture future = (APIExecutionFuture) startRawSubPipeLineAsynch(name, nodes, flowInput, options, webhooks);
         return returnWhenExecDone(future);
     }

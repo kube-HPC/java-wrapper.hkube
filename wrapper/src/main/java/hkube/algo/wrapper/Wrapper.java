@@ -84,7 +84,7 @@ public class Wrapper implements ICommandSender {
                 try {
                     container.connectToServer(this, uri);
                 } catch (Exception exc) {
-                    logger.error(exc);
+                    logger.debug(exc);
                 }
                 Thread.sleep(200);
             }
@@ -244,11 +244,21 @@ public class Wrapper implements ICommandSender {
 
                     }
                 } catch (Exception exc) {
+                    logger.error("unexpected exception", exc);
+                    Map<String, String> res = new HashMap<>();
+                    res.put("code", "Failed");
+                    res.put("message", exc.toString());
+                    sendMessage("errorMessage", res, true);
                     logger.error(exc);
                 }
                 return null;
             });
         } catch (Exception exc) {
+            logger.error("unexpected exception", exc);
+            Map<String, String> res = new HashMap<>();
+            res.put("code", "Failed");
+            res.put("message", exc.toString());
+            sendMessage("errorMessage", res, true);
             logger.error(exc);
         }
     }
