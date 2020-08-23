@@ -7,6 +7,7 @@ public class Consts {
     public final static String subPipelineError = "subPipelineError";
     public final static String subPipelineStopped = "subPipelineStopped";
     public final static String subPipelineId = "subPipelineId";
+    public final static String includeResult = "includeResult";
     public final static String execId = "execId";
     public final static String startAlgorithmExecution = "startAlgorithmExecution";
     public final static String startStoredSubPipeline = "startStoredSubPipeline";

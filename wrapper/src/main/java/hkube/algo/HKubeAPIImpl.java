@@ -46,10 +46,16 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
 
     @Override
     public Future<Map> startStoredPipeLineAsynch(String name, Map flowInput) {
+        return startStoredPipeLineAsynch(name,flowInput,true);
+    }
+
+    @Override
+    public Future<Map> startStoredPipeLineAsynch(String name, Map flowInput, boolean includeResult) {
         APIExecutionFuture future = new APIExecutionFuture();
         String executionId = getExecutionId(future);
         Map data = new HashMap();
         data.put(Consts.subPipelineId, executionId);
+        data.put(Consts.includeResult, includeResult);
         Map subPipeline = new HashMap();
         subPipeline.put("name", name);
         subPipeline.put(Consts.flowInput, flowInput);
@@ -65,6 +71,12 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
     }
 
     @Override
+    public Map startStoredPipeLine(String name, Map flowInput, boolean includeResult) {
+        APIExecutionFuture future = (APIExecutionFuture) startStoredPipeLineAsynch(name, flowInput,includeResult);
+        return returnWhenExecDone(future);
+    }
+
+    @Override
     public Future<Map> startRawSubPipeLineAsynch(String name, INode[] nodes, Map flowInput, Map options, Map webhooks) {
         APIExecutionFuture future = new APIExecutionFuture();
         String executionId;
@@ -74,9 +86,9 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
         List nodesList = new ArrayList();
         Arrays.asList(nodes).forEach(node -> {
             Map nodeAttributes = new HashMap();
-            nodeAttributes.put("nodeName",node.getName());
-            nodeAttributes.put("algorithmName",node.getAlgorithmName());
-            nodeAttributes.put("input",node.getInput());
+            nodeAttributes.put("nodeName", node.getName());
+            nodeAttributes.put("algorithmName", node.getAlgorithmName());
+            nodeAttributes.put("input", node.getInput());
             nodesList.add(nodeAttributes);
         });
 
@@ -126,19 +138,19 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
                 "subPipelineError", "subPipelineStopped"};
         if (Arrays.asList(executionCommands).contains(command)) {
             String executionId = (String) data.get("execId");
-            Map results = (Map)data.get("response");
-            Object res = dataAdapter.getData(results,null);
-            data.put("response",res);
+            Map results = (Map) data.get("response");
+            Object res = dataAdapter.getData(results, null);
+            data.put("response", res);
             executions.get(executionId).setResult(data);
-            logger.debug("algorithm execution result"+data);
+            logger.debug("algorithm execution result" + data);
         }
         if (Arrays.asList(subPipeCommands).contains(command)) {
             String executionId = (String) data.get("subPipelineId");
-            Map results = (Map)data.get("response");
-            Object res = dataAdapter.getData(results,null);
-            data.put("response",res);
+            Map results = (Map) data.get("response");
+            Object res = dataAdapter.getData(results, null);
+            data.put("response", res);
             executions.get(executionId).setResult(data);
-            logger.debug("subpipeline execution result"+data);
+            logger.debug("subpipeline execution result" + data);
         }
     }
 }
