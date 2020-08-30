@@ -18,6 +18,11 @@ public class CommConfig extends Config implements ICommConfig {
     }
 
     @Override
+    public Integer getNetworkTimeout() {
+        return getNumericEnvValue("DISCOVERY_NETWORK_TIMEOUT",1000);
+    }
+
+    @Override
     public String getListeningHost() {
         return "localhost";
     }

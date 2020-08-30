@@ -77,7 +77,7 @@ public class TestZMQ {
                 try {
                     Thread.sleep(2000);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+
                 }
                 server.reply(request);
             }

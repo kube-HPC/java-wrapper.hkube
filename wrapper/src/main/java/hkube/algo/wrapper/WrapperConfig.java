@@ -57,6 +57,10 @@ public class WrapperConfig extends Config {
 
             return getNumericEnvValue("DISCOVERY_TIMEOUT", 20000);
         }
+        public Integer getNetworkTimeout() {
+
+            return getNumericEnvValue("DISCOVERY_NETWORK_TIMEOUT", 1000);
+        }
     }
 
     public ICommConfig commConfig = new CommConfig();

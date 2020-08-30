@@ -26,9 +26,15 @@ public class ZMQServer implements IRequestServer {
                 while (!Thread.currentThread().isInterrupted()) {
                     // Block until a message is received
                     byte[] request = socket.recv(0);
-                    listeners.forEach((listener) -> {
-                        listener.onRequest(request);
-                    });
+                    if(request.length == "Are you there".getBytes().length && new String(request).equals("Are you there")){
+                        reply("Yes".getBytes());
+                    }
+                    else {
+
+                        listeners.forEach((listener) -> {
+                            listener.onRequest(request);
+                        });
+                    }
                 }
             }
         });
