@@ -8,23 +8,21 @@ import java.util.*;
 import java.util.concurrent.TimeoutException;
 
 public class SingleRequest extends DataRequest {
-    public SingleRequest(IRequest requestAdapter, String taskId,  String path, String encoding) {
-        super(requestAdapter, taskId, null, path, encoding);
+    public SingleRequest(IRequest requestAdapter, String taskId,   String encoding) {
+        super(requestAdapter, null, encoding);
+        List tasks = new ArrayList();
+        tasks.add(taskId);
+        super.tasks = tasks;
     }
     private static final Logger logger = LogManager.getLogger();
     public Object send() throws TimeoutException {
         HashMap map = new HashMap();
-        if (taskId != null) {
-            map.put("taskId", taskId);
-        }
-        if (path != null) {
-            map.put("dataPath", path);
-        }
         if (tasks != null) {
             map.put("tasks", tasks);
         }
-        Object decoded = encoder.decode(requestAdapter.send(encoder.encodeNoHeader(map)));
-
+        List <HeaderContentPair> headerContentPairs = requestAdapter.send(encoder.encodeNoHeader(map));
+        HeaderContentPair pair = headerContentPairs.get(0);
+        Object decoded = encoder.decodeSeparately(pair.getHeader(),pair.getContent());
         if (logger.isDebugEnabled()) {
             Object result = toJSON(decoded);
             logger.debug(result);

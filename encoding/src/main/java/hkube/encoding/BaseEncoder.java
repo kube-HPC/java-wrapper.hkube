@@ -31,7 +31,7 @@ public abstract class BaseEncoder {
         return stream.toByteArray();
     }
 
-    public Header getInfo(byte[] data) {
+    public static Header getInfo(byte[] data) {
         int headerEnd = ((int) data[1]);
         if (headerEnd > data.length || headerEnd<1) {
             return null;
@@ -66,34 +66,5 @@ public abstract class BaseEncoder {
 
     public abstract Integer getEncodingType();
 
-    public static class Header {
-        public Integer getVersion() {
-            return version;
-        }
 
-        public void setVersion(Integer version) {
-            this.version = version;
-        }
-
-        public boolean isEncoded() {
-            return isEncoded;
-        }
-
-        public void setEncoded(boolean encoded) {
-            isEncoded = encoded;
-        }
-
-        public Integer getEncodingType() {
-            return encodingType;
-        }
-
-        public void setEncodingType(Integer encodingType) {
-            this.encodingType = encodingType;
-        }
-
-        Integer version;
-        boolean isEncoded;
-        Integer encodingType;
-
-    }
 }

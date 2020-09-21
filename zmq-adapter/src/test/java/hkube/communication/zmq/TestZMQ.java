@@ -1,9 +1,13 @@
 package hkube.communication.zmq;
 
 import hkube.communication.CommConfig;
+import hkube.communication.HeaderContentPair;
 import org.junit.*;
 import hkube.communication.IRequestListener;
+
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
@@ -28,13 +32,16 @@ public class TestZMQ {
         class ServerListener implements IRequestListener {
             @Override
             public void onRequest(byte[] request) {
-                server.reply(request);
+                List<HeaderContentPair> reply = new ArrayList();
+                reply.add(new HeaderContentPair( new byte[]{},request));
+                server.reply(reply);
             }
         }
         ServerListener listener = new ServerListener();
         server.addRequestsListener(listener);
         ZMQRequest request = new ZMQRequest("localhost", new CommConfig().getListeningPort(), new CommConfig());
-        String rep = new String(request.send("maaa".getBytes()));
+
+        String rep = new String(request.send("maaa".getBytes()).get(0).getContent());
         assert rep.equals("maaa");
     }
 
@@ -44,7 +51,9 @@ public class TestZMQ {
         class ServerListener implements IRequestListener {
             @Override
             public void onRequest(byte[] request) {
-                server.reply(request);
+                List<HeaderContentPair> reply = new ArrayList();
+                reply.add(new HeaderContentPair( new byte[]{},request));
+                server.reply(reply);
             }
         }
         ServerListener listener = new ServerListener();
@@ -53,7 +62,7 @@ public class TestZMQ {
         Thread thread1 = new Thread(() -> {
             try {
                 ZMQRequest request = new ZMQRequest("localhost", new CommConfig().getListeningPort(), new CommConfig());
-                String rep = new String(request.send("maaa".getBytes()));
+                String rep = new String(request.send("maaa".getBytes()).get(0).getContent());
                 results.put("thread1", rep);
             }
             catch (TimeoutException e){
@@ -62,7 +71,7 @@ public class TestZMQ {
         });
         thread1.start();
         ZMQRequest request = new ZMQRequest("localhost", new CommConfig().getListeningPort(), new CommConfig());
-        String rep = new String(request.send("muu".getBytes()));
+        String rep = new String(request.send("muu".getBytes()).get(0).getContent());
         thread1.join();
         assert rep.equals("muu");
         assert results.get("thread1").equals("maaa");
@@ -79,7 +88,10 @@ public class TestZMQ {
                 } catch (InterruptedException e) {
 
                 }
-                server.reply(request);
+                HeaderContentPair pair = new HeaderContentPair(new byte[]{},request);
+                List rep = new ArrayList();
+                rep.add(pair);
+                server.reply(rep);
             }
         }
         ServerListener listener = new ServerListener();
@@ -90,6 +102,7 @@ public class TestZMQ {
             }
         };
         ZMQRequest request = new ZMQRequest("localhost", config.getListeningPort(), config);
+
         Assert.assertThrows(TimeoutException.class,() -> request.send("nothing".getBytes()));
     }
 

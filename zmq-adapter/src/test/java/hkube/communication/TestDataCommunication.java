@@ -43,27 +43,25 @@ public class TestDataCommunication {
         JSONObject data1 = parseJSON("data1.json");
         ds.addTaskData("taskId1",data1.toMap());
         ZMQRequest zmqr = new ZMQRequest("localhost", conf.getListeningPort(), conf);
-        DataRequest request = new SingleRequest(zmqr,"taskId1","level1.level2","msgpack");
+        DataRequest request = new SingleRequest(zmqr,"taskId1","msgpack");
         Object result = request.send();
         request.close();
-        assert ((Map)result).get("value2").equals("d2_l1_l2_value_2");
+        JSONObject resultAsJson = new JSONObject((Map)result);
+        assert resultAsJson.query("/level1/level2/value2").equals("d2_l1_l2_value_2");
         byte[] data2 = new byte[200];
         data2[1]=5;
         data2[2]=6;
         ds.addTaskData("taskId2",data2);
         zmqr = new ZMQRequest("localhost", conf.getListeningPort(), conf);
-        request = new SingleRequest(zmqr,"taskId2",null,"msgpack");
+        request = new SingleRequest(zmqr,"taskId2","msgpack");
         result =   request.send();
         request.close();
-        ByteBuffer buf = (ByteBuffer) result;
-        result = new byte[buf.remaining()];
-        buf.get((byte[])result);
         assert ((byte[])result)[1] == 5;
         assert ((byte[])result)[2] == 6;
         zmqr = new ZMQRequest("localhost", conf.getListeningPort(), conf);
-        request = new SingleRequest(zmqr,"taskId1",null,"msgpack");
+        request = new SingleRequest(zmqr,"taskId1","msgpack");
         result= request.send();
-        JSONObject resultAsJson = new JSONObject((Map)result);
+        resultAsJson = new JSONObject((Map)result);
         assert resultAsJson.query("/level1/value1").equals("d2_l1_value_1");
     }
 
@@ -77,11 +75,11 @@ public class TestDataCommunication {
         ZMQRequest zmqr = new ZMQRequest("localhost", conf.getListeningPort(), conf);
         List tasks = new ArrayList();
         tasks.add("taskId1");
-        BatchRequest request = new BatchRequest(zmqr,tasks,"level1.level2","msgpack");
+        BatchRequest request = new BatchRequest(zmqr,tasks,"msgpack");
         Map result = request.send();
         request.close();
-        assert ((Map)result.get("taskId1")).get("value2").equals("d2_l1_l2_value_2");
-
+        JSONObject resultAsJson = new JSONObject((Map)result);
+        assert resultAsJson.query("/taskId1/level1/level2/value2").equals("d2_l1_l2_value_2");
     }
 
 

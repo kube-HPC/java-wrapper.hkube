@@ -11,45 +11,32 @@ import java.util.concurrent.TimeoutException;
 public class BatchRequest extends DataRequest {
     private static final Logger logger = LogManager.getLogger();
 
-    public BatchRequest(IRequest requestAdapter, List tasks, String path, String encoding) {
-        super(requestAdapter, null, tasks, path, encoding);
+    public BatchRequest(IRequest requestAdapter, List tasks, String encoding) {
+        super(requestAdapter, tasks, encoding);
     }
 
-    public Map send() throws TimeoutException {
+    public Map<String, Object> send() throws TimeoutException {
         HashMap map = new HashMap();
-        if (path != null) {
-            map.put("dataPath", path);
-        }
         if (tasks != null) {
             map.put("tasks", tasks);
         }
-        Object decoded = encoder.decode(requestAdapter.send(encoder.encodeNoHeader(map)));
-
+        List<HeaderContentPair> reply = requestAdapter.send(encoder.encodeNoHeader(map));
+        final List encoded = new ArrayList<>();
+        reply.stream().forEach(rep -> {
+            encoded.add(encoder.decodeSeparately(rep.getHeader(), rep.getContent()));
+        });
         if (logger.isDebugEnabled()) {
-            JSONObject result = (JSONObject) toJSON(decoded);
+            Object result = toJSON(encoded);
             logger.debug(result);
         }
-        Map reslutMap = new HashMap<>();
-
-        if (decoded instanceof Map) {
-            Map result = (Map) decoded;
-            if (result.get("hkube_error") != null) {
-                logger.warn(result.toString());
-                throw new RuntimeException(result.toString());
+        Map<String, Object> reslutMap = new HashMap<>();
+        Iterator itemIterator = encoded.iterator();
+        int i = 0;
+        while (itemIterator.hasNext()) {
+            Object currentItem = itemIterator.next();
+            if (currentItem instanceof Map && (((Map) currentItem).get("hkube_error") == null)) {
+                reslutMap.put((String) tasks.get(i), currentItem);
             }
-
-            if (result.get("items")!=null) {
-                Collection items = (Collection) result.get("items");
-                Iterator itemIterator = items.iterator();
-                int i = 0;
-                while (itemIterator.hasNext()) {
-                    Object currentItem = itemIterator.next();
-                    if (currentItem instanceof Map && (((Map)currentItem).get("hkube_error")==null)) {
-                        reslutMap.put(tasks.get(i), currentItem);
-                    }
-                }
-            }
-
         }
         return reslutMap;
     }

@@ -46,50 +46,43 @@ public class DataAdapter {
             while (iterator.hasNext()) {
                 Object value;
                 Map.Entry<String, Object> entry = iterator.next();
+                String key = entry.getKey();
                 Object dataReference = entry.getValue();
                 if (!(dataReference instanceof String) || !((String) dataReference).startsWith("$$")) {
                     value = dataReference;
-                    String key = entry.getKey();
-                    String[] keyParts = key.split("\\.");
-                    Map tempValue = results;
-                    for (int i = 0; i < keyParts.length - 1; i++) {
-                        Map partMap = (Map) tempValue.get(keyParts[i]);
-                        if (partMap == null) {
-                            tempValue.put(keyParts[i], new HashMap<>());
-                        }
-                        tempValue = (Map) tempValue.get(keyParts[i]);
-                    }
-                    tempValue.put(keyParts[keyParts.length - 1], value);
                 } else {
                     dataReference = ((String) dataReference).substring(2);
-                    Object item = storage.get((String) dataReference);
+                    Object item = storage.get(dataReference);
                     String jobId = (String) args.get("jobId");
-                    if (item instanceof Collection) {
-                        value = new ArrayList();
-                        Iterator batchIterator = ((Collection) item).iterator();
-                        while (batchIterator.hasNext()) {
-                            Map single = (Map) batchIterator.next();
-                            Object singleData = getData(single, jobId);
-                            ((List) value).add(singleData);
-                        }
+                    if (item instanceof List) {
+                        Map batchInfp = (Map) ((List) item).get(0);
+                        value = getData(batchInfp, jobId);
                     } else {
                         value = getData((Map) item, jobId);
                     }
-                    String key = entry.getKey();
-                    String[] keyParts = key.split("\\.");
-                    Map tempValue = results;
-                    for (int i = 0; i < keyParts.length - 1; i++) {
-                        Map partMap = (Map) tempValue.get(keyParts[i]);
-                        if (partMap == null) {
-                            tempValue.put(keyParts[i], new HashMap<>());
-                        }
-                        tempValue = (Map) tempValue.get(keyParts[i]);
+                }
+                if (value instanceof byte[]) {
+                    value = ByteBuffer.wrap((byte[]) value);
+                }
+                String[] keyParts = key.split("\\.");
+                Object currentValue = args.get("input");
+                Object tempValue = currentValue;
+                for (int i = 0; i < keyParts.length - 1; i++) {
+                    if (StringUtils.isNumeric(keyParts[i])) {
+                        tempValue = ((List) tempValue).get(Integer.valueOf(keyParts[i]));
+
+                    } else {
+                        tempValue = ((Map) tempValue).get(keyParts[i]);
                     }
-                    tempValue.put(keyParts[keyParts.length - 1], value);
+                }
+                String index = keyParts[keyParts.length - 1];
+                if (StringUtils.isNumeric(keyParts[keyParts.length - 1])) {
+                    ((ArrayList) tempValue).set(Integer.valueOf(index), value);
+
+                } else {
+                    ((Map) tempValue).put(index, value);
                 }
             }
-            ;
-            return (Collection) getAsArray(results,args.get("input"));
         }
 
         Collection originalInput = (Collection) args.get("input");
@@ -102,30 +95,7 @@ public class DataAdapter {
             }
             inputList.add(value);
         }
-        return inputList;
-    }
-
-    private Object getAsArray(Map<String, Object> results,Object originalInput) {
-        AtomicInteger index = new AtomicInteger();
-        results.entrySet().stream().forEach(entry -> {
-            Object next;
-            if (entry.getValue() instanceof Map) {
-                if(originalInput instanceof Map){
-                    next = ((Map) originalInput).get(entry.getKey());
-                }
-                else {
-                   next =  ((List)originalInput).get(index.get());
-                }
-                results.put(entry.getKey(), getAsArray((Map) entry.getValue(),next));
-                index.getAndIncrement();
-            }
-        });
-        if (originalInput instanceof Collection) {
-            return results.values();
-        }
-        else{
-            return results;
-        }
+        return originalInput;
     }
 
     public Object getData(Map single, String jobId) {
@@ -151,19 +121,28 @@ public class DataAdapter {
             if (single.get("tasks") != null) {
                 //batch with discovery
                 tasks = getStringListFromJSONArray((Collection) single.get("tasks"));
-                batchRequest = new BatchRequest(zmqr, tasks, path, config.commConfig.getEncodingType());
+                batchRequest = new BatchRequest(zmqr, tasks, config.commConfig.getEncodingType());
             } else {
                 task = (String) single.get("taskId");
-                singleRequest = new SingleRequest(zmqr, task, path, config.commConfig.getEncodingType());
+                singleRequest = new SingleRequest(zmqr, task, config.commConfig.getEncodingType());
             }
             try {
-                if (singleRequest != null)
+                if (singleRequest != null) {
                     value = singleRequest.send();
-                else {
-                    Map batchReslut = batchRequest.send();
+                    value = storageProxy.getSpecificData(value, path);
+                } else {
+                    Map<String, Object> batchReslut = batchRequest.send();
+                    List resultValues = batchReslut.values().stream().map(result -> {
+                        if (path != null && !path.equals(""))
+                            return storageProxy.getSpecificData(result, path);
+                        else
+                            return result;
+                    }).collect(Collectors.toList());
+
+
                     List<String> missingTasks = tasks.stream().filter(taskId -> !batchReslut.containsKey(taskId)).collect(Collectors.toList());
                     value = missingTasks.stream().map((taskId) -> storageProxy.getInputParamFromStorage(jobId, taskId, path)).collect(Collectors.toList());
-                    ((Collection) value).addAll(batchReslut.values());
+                    ((Collection) value).addAll(resultValues);
                 }
             } catch (TimeoutException e) {
                 logger.warn("Timeout trying to get output from " + host + ":" + port);
@@ -198,7 +177,7 @@ public class DataAdapter {
             while (tokenizer.hasMoreElements()) {
                 String nextToken = tokenizer.nextToken();
                 if (StringUtils.isNumeric(nextToken)) {
-                    nextToken = "[" + nextToken + "]";
+                    nextToken = "[" + (Integer.valueOf(nextToken) + 1) + "]";
                     relativePath = relativePath + nextToken;
                 } else {
                     relativePath = relativePath + "/" + nextToken;

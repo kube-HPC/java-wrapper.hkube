@@ -1,22 +1,27 @@
 package hkube.communication;
 
 
+import hkube.encoding.Encoded;
 import hkube.encoding.EncodingManager;
 import hkube.encoding.IEncoder;
 import org.apache.commons.jxpath.JXPathContext;
 import org.json.JSONObject;
 import org.apache.commons.lang3.StringUtils;
+
 import java.util.*;
 import java.util.stream.Collectors;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 public class DataServer implements IRequestListener {
     private static final Logger logger = LogManager.getLogger();
     IRequestServer communication;
     IEncoder encoder;
+    Encoded notAvailableError;
 
     private class DataCache {
-        Map<String, Object> dataByTaskIdMap = new HashMap();
+        Map<String, Encoded> dataByTaskIdMap = new HashMap();
         SortedMap<Long, String> tasksByTime = new TreeMap<Long, String>();
 
         private void removeOldestFromCache() {
@@ -30,11 +35,11 @@ public class DataServer implements IRequestListener {
             if (dataByTaskIdMap.size() == conf.getMaxCacheSize()) {
                 removeOldestFromCache();
             }
-            dataByTaskIdMap.put(taskId, data);
+            dataByTaskIdMap.put(taskId, encoder.encodeSeparately(data));
             tasksByTime.put(new Date().getTime(), taskId);
         }
 
-        public Object getData(String taskId) {
+        public Encoded getData(String taskId) {
             return dataByTaskIdMap.get(taskId);
         }
 
@@ -46,6 +51,7 @@ public class DataServer implements IRequestListener {
     public DataServer(IRequestServer communication, ICommConfig conf) {
         communication.addRequestsListener(this);
         encoder = new EncodingManager(conf.getEncodingType());
+        notAvailableError = encoder.encodeSeparately(createError("notAvailable", "taskId notAvailable").toMap());
         this.communication = communication;
         this.conf = conf;
     }
@@ -59,72 +65,42 @@ public class DataServer implements IRequestListener {
         try {
             logger.debug("Got Request");
             Map requestInfo = (Map) encoder.decode(request);
-            if(logger.isDebugEnabled()){
-                logger.debug("Got request "+new JSONObject((requestInfo)));
+            if (logger.isDebugEnabled()) {
+                logger.debug("Got request " + new JSONObject((requestInfo)));
             }
-            String taskId = (String) requestInfo.get("taskId");
-            String path = (String) requestInfo.get("dataPath");
+
             List<String> tasks = (List) requestInfo.get("tasks");
 
-            if (taskId == null && tasks == null) {
-                communication.reply(this.encoder.encode(createError("unknown", "Request must contain either task or tasks attribute")));
-            } else if (taskId != null) {
-                Object result = getResult(taskId,path);
-                if(logger.isDebugEnabled()){
-                    logger.debug("Responding" + result);
-                }
-                communication.reply(this.encoder.encode(result));
+            if (tasks == null) {
+                Encoded encodedError = this.encoder.encodeSeparately(createError("unknown", "Request must contain either task or tasks attribute"));
+                List<HeaderContentPair> reply = new ArrayList();
+                reply.add(new HeaderContentPair(encodedError.getHeader(), encodedError.getContent()));
+                communication.reply(reply);
             } else {
-                List items = tasks.stream().map((task) -> getResult(task, path)).collect(Collectors.toList());
-                boolean hasError = items.stream().anyMatch(item -> {
-                    if (item.getClass().equals(JSONObject.class) && ((JSONObject) item).get("hkube_error") != null)
-                        return true;
-                    else return false;
-                });
-                JSONObject result = new JSONObject();
-                result.put("items", items);
-                result.put("errors", hasError);
-                if(logger.isDebugEnabled()){
-                    logger.debug("Responding "+result);
+                List<Encoded> items = tasks.stream().map((task) -> getResult(task)).collect(Collectors.toList());
+                List<HeaderContentPair> reply = items.stream().map(item ->
+                        new HeaderContentPair(item.getHeader(), item.getContent())
+                ).collect(Collectors.toList());
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Responding " + reply);
                 }
-                communication.reply(this.encoder.encode(result.toMap()));
+                communication.reply(reply);
             }
         } catch (Throwable e) {
-            JSONObject result = new JSONObject();
-            List items = new ArrayList();
-            items.add(createError("unknown", "Unexpected error " + e.getMessage()));
-            result.put("items", items);
-            result.put("errors", true);
-            logger.warn("Data server responding:" + result);
-            communication.reply(this.encoder.encode(result.toMap()));
+            List<HeaderContentPair> reply = new ArrayList();
+            Encoded encodedError = encoder.encodeSeparately(createError("unknown", "Unexpected error " + e.getMessage()));
+            reply.add(new HeaderContentPair(encodedError.getHeader(), encodedError.getContent()));
+            logger.warn("Data server responding:" + reply);
+            communication.reply(reply);
         }
     }
 
-    private Object getResult(String taskId, String path) {
-        Object data = dataCache.getData(taskId);
-        Object result;
+    private Encoded getResult(String taskId) {
+        Encoded data = dataCache.getData(taskId);
         if (data == null) {
-            result = createError("notAvailable", "taskId notAvailable").toMap();
-        } else {
-
-            if (path != null && !path.equals("")) {
-                if (data instanceof Map || data instanceof Collection) {
-                    if(logger.isDebugEnabled()){
-                        logger.debug("quering " + path +" from " + data);
-                    }
-                    result = getSpecificData(data,path);
-                } else {
-                    result = createError("unknown", "Can't get data by path, data is not json");
-                }
-            } else {
-                result = data;
-            }
+            data = notAvailableError;
         }
-        if (result instanceof JSONObject) {
-            return ((JSONObject) result).toMap();
-        } else {
-            return result;
-        }
+        return data;
     }
 
     private Object getSpecificData(Object storedData, String path) {
@@ -135,15 +111,15 @@ public class DataServer implements IRequestListener {
             while (tokenizer.hasMoreElements()) {
                 String nextToken = tokenizer.nextToken();
                 if (StringUtils.isNumeric(nextToken)) {
-                    nextToken = "[" + (Integer.valueOf(nextToken)+1) + "]";
+                    nextToken = "[" + (Integer.valueOf(nextToken) + 1) + "]";
                     relativePath = relativePath + nextToken;
                 } else {
                     relativePath = relativePath + "/" + nextToken;
                 }
             }
-            if ((storedData instanceof Map|| storedData instanceof Collection) && relativePath.length() > 0) {
-                if (relativePath.startsWith("[")){
-                    relativePath="."+relativePath;
+            if ((storedData instanceof Map || storedData instanceof Collection) && relativePath.length() > 0) {
+                if (relativePath.startsWith("[")) {
+                    relativePath = "." + relativePath;
                 }
                 value = JXPathContext.newContext(storedData).getValue(relativePath);
             } else {

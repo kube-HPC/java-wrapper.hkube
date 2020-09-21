@@ -30,6 +30,11 @@ public class EncodingManager extends BaseEncoder implements IEncoder {
     }
 
     @Override
+    public Encoded encodeSeparately(Object obj) {
+        return encodings.get(defaultEncoding).encodeSeparately(obj);
+    }
+
+    @Override
     public byte[] encodeNoHeader(Object obj) {
         return encodings.get(defaultEncoding).encodeNoHeader(obj);
     }
@@ -41,12 +46,20 @@ public class EncodingManager extends BaseEncoder implements IEncoder {
             return decodeNoHeader(data, encoder);
         }
         if (!info.isEncoded()) {
-
             return getByteBufferNoHeader(data);
         } else {
             IEncoder encoder = encodings.get(info.getEncodingType().toString());
-            ;
             return encoder.decode(data);
+        }
+    }
+
+    @Override
+    public Object decodeSeparately(Header header, byte[] data) {
+        if (!header.isEncoded()) {
+            return data;
+        } else {
+            IEncoder encoder = encodings.get(header.getEncodingType().toString());
+            return encoder.decodeNoHeader(data);
         }
     }
 

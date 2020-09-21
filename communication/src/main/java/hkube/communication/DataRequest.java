@@ -15,16 +15,14 @@ public abstract class DataRequest {
     IRequest requestAdapter;
     String taskId;
     List tasks;
-    String path;
     EncodingManager encoder;
     private static final Logger logger = LogManager.getLogger();
 
-    public DataRequest(IRequest requestAdapter, String taskId, List tasks, String path, String encoding) {
+    public DataRequest(IRequest requestAdapter, List tasks, String encoding) {
         encoder = new EncodingManager(encoding);
         this.requestAdapter = requestAdapter;
-        this.taskId = taskId;
         this.tasks = tasks;
-        this.path = path;
+
         if (taskId != null && tasks != null) {
             logger.warn("DataRequest should contain either task or tasks, not both");
         }

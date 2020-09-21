@@ -64,7 +64,7 @@ public class StorageProxy {
         return value;
     }
 
-    private Object getSpecificData(Object storedData, String path) {
+    public Object getSpecificData(Object storedData, String path) {
         Object value;
         if (path.length() > 0) {
             StringTokenizer tokenizer = new StringTokenizer(path, ".");

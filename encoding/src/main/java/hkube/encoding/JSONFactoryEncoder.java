@@ -28,14 +28,10 @@ public abstract class JSONFactoryEncoder extends BaseEncoder implements IEncoder
         Timing timing = new Timing(logger, "encode");
         timing.start();
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        ObjectMapper objectMapper = new ObjectMapper(factory);
+        Encoded encoded = encodeSeparately(obj);
         try {
-            out.write(createHeader(!(obj instanceof byte[])));
-            if (obj instanceof byte[]) {
-                out.write((byte[]) obj);
-            } else {
-                out.write(objectMapper.writeValueAsBytes(obj));
-            }
+            out.write(encoded.getHeader());
+            out.write(encoded.getContent());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -45,12 +41,39 @@ public abstract class JSONFactoryEncoder extends BaseEncoder implements IEncoder
         return result;
     }
 
+    public Encoded encodeSeparately(Object obj){
+        Timing timing = new Timing(logger, "encode_separately");
+        timing.start();
+        byte[] header;
+        byte[] encodedContent;
+        bufferToBytes(obj);
+        ObjectMapper objectMapper = new ObjectMapper(factory);
+        try {
+            header = createHeader(!(obj instanceof byte[]));
+            if (obj instanceof byte[]) {
+                encodedContent = (byte[]) obj;
+            } else {
+                encodedContent =  objectMapper.writeValueAsBytes(obj);
+            }
+            Encoded result = new Encoded(header,encodedContent);
+            return  result;
+        } catch (IOException e) {
+            logger.error(e);
+            return  null;
+        }
+        finally {
+            timing.end();
+            timing.logInfo();
+        }
+    }
+
     @Override
     public byte[] encodeNoHeader(Object obj) {
         Timing timing = new Timing(logger, "encode");
         timing.start();
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ObjectMapper objectMapper = new ObjectMapper(factory);
+        bufferToBytes(obj);
         try {
             out.write(objectMapper.writeValueAsBytes(obj));
         } catch (IOException e) {
@@ -82,6 +105,10 @@ public abstract class JSONFactoryEncoder extends BaseEncoder implements IEncoder
     }
 
 
+    public Object decodeSeparately(Header header, byte[] data)  {
+        return decodeNoHeader(data);
+    }
+
     private void bufferToBytes(Object obj) {
         if (obj instanceof Map) {
             Set keys = ((Map) obj).keySet();
@@ -103,6 +130,7 @@ public abstract class JSONFactoryEncoder extends BaseEncoder implements IEncoder
             });
         }
     }
+
     private void byteToByteBuffer(Object obj) {
         if (obj instanceof Map) {
             Set keys = ((Map) obj).keySet();
