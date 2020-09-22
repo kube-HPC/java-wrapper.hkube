@@ -4,6 +4,7 @@ import hkube.api.INode;
 import org.json.JSONObject;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class CreateBytes implements IAlgorithm {
@@ -16,8 +17,8 @@ public class CreateBytes implements IAlgorithm {
 
     @Override
     public Object Start(Map input, IHKubeAPI hkubeAPI) throws Exception {
-        byte[] bytesArr = new byte[20];
-        bytesArr[5]=5;
+        Integer size = (Integer)((List)input.get("input")).get(0);
+        byte[] bytesArr = new byte[size];
         return bytesArr;
     }
 

@@ -16,6 +16,7 @@ public class SingleRequest extends DataRequest {
     }
     private static final Logger logger = LogManager.getLogger();
     public Object send() throws TimeoutException {
+        logger.info("Invoking single from peer");
         HashMap map = new HashMap();
         if (tasks != null) {
             map.put("tasks", tasks);

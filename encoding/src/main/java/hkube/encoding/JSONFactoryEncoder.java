@@ -148,7 +148,7 @@ public abstract class JSONFactoryEncoder extends BaseEncoder implements IEncoder
 
     @Override
     public Object decodeNoHeader(byte[] data) {
-        Timing timing = new Timing(logger, "decode");
+        Timing timing = new Timing(logger, "decodeNoHeader");
         timing.start();
         ObjectMapper objectMapper = new ObjectMapper(factory);
         try {

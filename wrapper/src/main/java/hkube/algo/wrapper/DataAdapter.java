@@ -17,7 +17,6 @@ import hkube.communication.zmq.ZMQRequest;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class DataAdapter {
@@ -141,6 +140,7 @@ public class DataAdapter {
 
 
                     List<String> missingTasks = tasks.stream().filter(taskId -> !batchReslut.containsKey(taskId)).collect(Collectors.toList());
+                    logger.info("Got " + (tasks.size()-missingTasks.size())+ "valid task results from batch request");
                     value = missingTasks.stream().map((taskId) -> storageProxy.getInputParamFromStorage(jobId, taskId, path)).collect(Collectors.toList());
                     ((Collection) value).addAll(resultValues);
                 }

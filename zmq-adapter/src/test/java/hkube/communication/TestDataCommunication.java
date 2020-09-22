@@ -1,7 +1,6 @@
 package hkube.communication;
 
 import hkube.communication.zmq.ZMQRequest;
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import hkube.communication.zmq.ZMQServer;
@@ -10,7 +9,6 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;

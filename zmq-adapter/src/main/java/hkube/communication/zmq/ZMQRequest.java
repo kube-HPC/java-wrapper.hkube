@@ -60,7 +60,6 @@ public class ZMQRequest implements IRequest {
             headerContentPairs.add(new HeaderContentPair(header,body));
             hasMore = socket.hasReceiveMore();
         }
-        System.out.print("6");
         if(header == null || body == null){
             throw new TimeoutException();
         }

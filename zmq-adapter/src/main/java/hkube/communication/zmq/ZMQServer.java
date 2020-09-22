@@ -32,7 +32,6 @@ public class ZMQServer implements IRequestServer {
                 while (!Thread.currentThread().isInterrupted()) {
                     // Block until a message is received
                     byte[] request = socket.recv(0);
-                    System.out.print("got request");
                     listeners.forEach((listener) -> {
                         listener.onRequest(request);
                     });
@@ -48,7 +47,6 @@ public class ZMQServer implements IRequestServer {
                     // Block until a message is received
                     byte[] request = pingSocket.recv(0);
                     if (new String(request).equals("ping")) {
-                        System.out.print("got ping");
                         pingSocket.send("pong".getBytes());
                     }
                 }

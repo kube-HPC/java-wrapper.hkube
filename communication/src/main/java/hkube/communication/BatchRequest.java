@@ -16,6 +16,7 @@ public class BatchRequest extends DataRequest {
     }
 
     public Map<String, Object> send() throws TimeoutException {
+        logger.info("Invoking batch from peer");
         HashMap map = new HashMap();
         if (tasks != null) {
             map.put("tasks", tasks);
