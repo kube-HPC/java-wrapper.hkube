@@ -140,7 +140,7 @@ public class DataAdapter {
 
 
                     List<String> missingTasks = tasks.stream().filter(taskId -> !batchReslut.containsKey(taskId)).collect(Collectors.toList());
-                    logger.info("Got " + (tasks.size()-missingTasks.size())+ "valid task results from batch request");
+                    logger.info("Got " + (tasks.size() - missingTasks.size()) + "valid task results from batch request");
                     value = missingTasks.stream().map((taskId) -> storageProxy.getInputParamFromStorage(jobId, taskId, path)).collect(Collectors.toList());
                     ((Collection) value).addAll(resultValues);
                 }
@@ -151,14 +151,19 @@ public class DataAdapter {
             }
         }
         if (value == null) {
+            logger.info("value null getting from storage");
             if (single.get("storageInfo") != null) {
                 Map storageInfo = (Map) single.get("storageInfo");
+                logger.info("Getting single task result from storage");
                 value = storageProxy.getInputParamFromStorage(storageInfo, path);
+                logger.info("Got value from storage");
             } else {
                 //batch without discovery
                 if (single.get("tasks") != null) {
                     tasks = getStringListFromJSONArray((Collection) single.get("tasks"));
+                    logger.info("Getting result of batch from storage");
                     value = tasks.stream().map((taskId) -> storageProxy.getInputParamFromStorage(jobId, taskId, path)).collect(Collectors.toList());
+                    logger.info("Got value from storage");
                 }
             }
         }
