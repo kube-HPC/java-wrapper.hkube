@@ -3,7 +3,9 @@ package hkube.algo.wrapper;
 
 import hkube.communication.BatchRequest;
 import hkube.communication.SingleRequest;
+
 import hkube.encoding.EncodingManager;
+import hkube.model.HeaderContentPair;
 import hkube.storage.StorageFactory;
 import hkube.storage.TaskStorage;
 import org.apache.commons.lang3.StringUtils;
@@ -14,7 +16,6 @@ import org.apache.logging.log4j.Logger;
 
 import hkube.communication.zmq.ZMQRequest;
 
-import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -60,9 +61,6 @@ public class DataAdapter {
                         value = getData((Map) item, jobId);
                     }
                 }
-                if (value instanceof byte[]) {
-                    value = ByteBuffer.wrap((byte[]) value);
-                }
                 String[] keyParts = key.split("\\.");
                 Object currentValue = args.get("input");
                 Object tempValue = currentValue;
@@ -89,9 +87,6 @@ public class DataAdapter {
         Collection inputList = new ArrayList();
         while (iterator.hasNext()) {
             Object value = iterator.next();
-            if (value instanceof byte[]) {
-                value = ByteBuffer.wrap((byte[]) value);
-            }
             inputList.add(value);
         }
         return originalInput;
@@ -222,8 +217,8 @@ public class DataAdapter {
         return metadata;
     }
 
-    byte[] encode(Object toBeEncoded, String encodingType) {
-        byte[] encodedBytes = new EncodingManager(encodingType).encode(toBeEncoded);
+    HeaderContentPair encode(Object toBeEncoded, String encodingType) {
+        HeaderContentPair encodedBytes = new EncodingManager(encodingType).encodeSeparately(toBeEncoded);
         return encodedBytes;
     }
 

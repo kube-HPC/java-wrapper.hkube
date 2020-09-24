@@ -9,6 +9,8 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import hkube.encoding.EncodingManager;
+import hkube.model.HeaderContentPair;
 import hkube.storage.ISimplePathStorage;
 import hkube.storage.IStorageConfig;
 import hkube.utils.Config;
@@ -63,8 +65,10 @@ public class TestS3 {
     public void testPutGet() throws FileNotFoundException {
         ISimplePathStorage adapter = new S3Adapter();
         adapter.setConfig(storageConfig);
-        adapter.put(File.separator + bucket + File.separator + "dir1" + File.separator + "dir2" + File.separator + "Stam", "Kloom".getBytes());
-        String output = new String(adapter.get(File.separator + bucket + File.separator + "dir1" + File.separator + "dir2" + File.separator + "Stam"));
+        EncodingManager encodingManager = new EncodingManager("msgpack");
+        byte[] header = encodingManager.createHeader(false);
+        adapter.put(File.separator + bucket + File.separator + "dir1" + File.separator + "dir2" + File.separator + "Stam", new HeaderContentPair(header, "Kloom".getBytes()));
+        String output = new String(adapter.get(File.separator + bucket + File.separator + "dir1" + File.separator + "dir2" + File.separator + "Stam").getContent());
         assert output.equals("Kloom");
     }
 
@@ -72,9 +76,11 @@ public class TestS3 {
     public void testList() throws FileNotFoundException {
         ISimplePathStorage adapter = new S3Adapter();
         adapter.setConfig(storageConfig);
-        adapter.put(File.separator + bucket + File.separator + "dir5" + File.separator + "dir6" + File.separator + "Stam", "Kloom".getBytes());
-        adapter.put(File.separator + bucket + File.separator + "dir1" + File.separator + "dir2" + File.separator + "Stam", "Kloom".getBytes());
-        adapter.put(File.separator + bucket + File.separator + "dir1" + File.separator + "dir3" + File.separator + "Stam", "Kloom".getBytes());
+        EncodingManager encodingManager = new EncodingManager("msgpack");
+        byte[] header = encodingManager.createHeader(false);
+        adapter.put(File.separator + bucket + File.separator + "dir5" + File.separator + "dir6" + File.separator + "Stam", new HeaderContentPair(header, "Kloom".getBytes()));
+        adapter.put(File.separator + bucket + File.separator + "dir1" + File.separator + "dir2" + File.separator + "Stam", new HeaderContentPair(null, "Kloom".getBytes()));
+        adapter.put(File.separator + bucket + File.separator + "dir1" + File.separator + "dir3" + File.separator + "Stam", new HeaderContentPair(null, "Kloom".getBytes()));
         List dirContent = adapter.list(File.separator + bucket + File.separator + "dir1");
         assert dirContent.size() == 2;
         assert dirContent.contains("dir1" + File.separator + "dir3" + File.separator + "Stam");

@@ -1,6 +1,6 @@
 package hkube.communication.zmq;
 
-import hkube.communication.HeaderContentPair;
+import hkube.model.HeaderContentPair;
 import hkube.communication.ICommConfig;
 import hkube.communication.IRequestListener;
 import hkube.communication.IRequestServer;

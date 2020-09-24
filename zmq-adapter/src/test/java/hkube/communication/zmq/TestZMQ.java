@@ -1,7 +1,7 @@
 package hkube.communication.zmq;
 
 import hkube.communication.CommConfig;
-import hkube.communication.HeaderContentPair;
+import hkube.model.HeaderContentPair;
 import org.junit.*;
 import hkube.communication.IRequestListener;
 

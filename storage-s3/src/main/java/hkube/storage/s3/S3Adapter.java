@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.StringTokenizer;
 
@@ -15,13 +16,15 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.*;
 import com.amazonaws.services.s3.AmazonS3;
+import hkube.model.HeaderContentPair;
 import hkube.storage.ISimplePathStorage;
 import hkube.storage.IStorageConfig;
 
 public class S3Adapter implements ISimplePathStorage {
-    public static ISimplePathStorage getInstance(){
+    public static ISimplePathStorage getInstance() {
         return new S3Adapter();
     }
+
     AmazonS3 conn;
 
     S3Adapter() {
@@ -35,19 +38,32 @@ public class S3Adapter implements ISimplePathStorage {
 
 
     @Override
-    public void put(String path, byte[] data) {
-        ByteArrayInputStream input = new ByteArrayInputStream(data);
+    public void put(String path, HeaderContentPair data) {
+        ByteArrayInputStream input = new ByteArrayInputStream(data.getContent());
+        ObjectMetadata metadata = new ObjectMetadata();
+        byte [] header = data.getHeaderAsBytes();
+        if(header != null) {
+            metadata.addUserMetadata("header", Base64.getEncoder().encodeToString(data.getHeaderAsBytes()));
+        }
         conn.putObject(getBucket(path), getPathInBucket(path), input, new ObjectMetadata());
     }
 
     @Override
-    public byte[] get(String path) throws FileNotFoundException {
+    public HeaderContentPair get(String path) throws FileNotFoundException {
         byte[] tartgetArray;
         try {
             S3Object objectInfo = conn.getObject(getBucket(path), getPathInBucket(path));
+            ObjectMetadata metadata = objectInfo.getObjectMetadata();
+            String headerAsString = metadata.getUserMetaDataOf("header");
+            byte[] headerBytes = null;
+            if (headerAsString != null) {
+                headerBytes = Base64.getDecoder().decode(headerAsString);
+            }
             S3ObjectInputStream inputStream = objectInfo.getObjectContent();
             tartgetArray = new byte[inputStream.available()];
             inputStream.read(tartgetArray);
+            HeaderContentPair pair = new HeaderContentPair(headerBytes,tartgetArray);
+            return pair;
         } catch (AmazonS3Exception e) {
             if (e.getMessage().contains("NoSuchKey")) {
                 throw new FileNotFoundException(path);
@@ -55,7 +71,7 @@ public class S3Adapter implements ISimplePathStorage {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        return tartgetArray;
+
     }
 
     @Override
@@ -78,9 +94,9 @@ public class S3Adapter implements ISimplePathStorage {
 
     @Override
     public void setConfig(IStorageConfig config) {
-        IS3Config s3Config = (IS3Config)config.getTypeSpecificConfig();
-        String accessKey =  s3Config.getAccessKeyId();
-        String secretKey =  s3Config.getSecretAccessKey();
+        IS3Config s3Config = (IS3Config) config.getTypeSpecificConfig();
+        String accessKey = s3Config.getAccessKeyId();
+        String secretKey = s3Config.getSecretAccessKey();
         init(accessKey, secretKey);
     }
 

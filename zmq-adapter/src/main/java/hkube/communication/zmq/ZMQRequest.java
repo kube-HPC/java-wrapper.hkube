@@ -1,7 +1,7 @@
 package hkube.communication.zmq;
 
 
-import hkube.communication.HeaderContentPair;
+import hkube.model.HeaderContentPair;
 import hkube.communication.ICommConfig;
 import hkube.communication.IRequest;
 import org.apache.logging.log4j.LogManager;

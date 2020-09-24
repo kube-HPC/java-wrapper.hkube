@@ -1,6 +1,6 @@
-package hkube.communication;
+package hkube.model;
 
-import hkube.encoding.Header;
+import hkube.model.Header;
 import java.util.Arrays;
 
 public class HeaderContentPair {
@@ -32,10 +32,7 @@ public class HeaderContentPair {
         if(!magicNumber.equals(new String(MAGIC_NUMBER))){
             return null;
         }
-        Header header = new Header();
-        header.setVersion((int) headerBytes[0]);
-        header.setEncodingType((int) headerBytes[3]);
-        header.setEncoded((int) headerBytes[2] == 2);
+        Header header = new Header(headerBytes);
         return header;
     }
 }

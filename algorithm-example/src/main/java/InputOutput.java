@@ -4,7 +4,7 @@ import org.json.JSONObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.nio.ByteBuffer;
+
 import java.util.*;
 
 public class InputOutput implements IAlgorithm {
@@ -28,11 +28,7 @@ public class InputOutput implements IAlgorithm {
         List outputList = new ArrayList();
         Collection input = (Collection)args.get("input");
         input.stream().forEach(item -> {
-            if (item instanceof ByteBuffer) {
-                byte[] arr = new byte[((ByteBuffer) item).remaining()];
-                ((ByteBuffer) item).get(arr);
-                outputList.add(arr);
-            } else outputList.add(item);
+            outputList.add(item);
         });
         Map output = new HashMap();
         output.put("prevInput", outputList);

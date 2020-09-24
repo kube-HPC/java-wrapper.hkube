@@ -4,7 +4,7 @@ import hkube.encoding.JsonEncoder;
 import hkube.encoding.MSGPackEncoder;
 import org.junit.Test;
 
-import java.nio.ByteBuffer;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,13 +18,11 @@ public class EncodingTest {
         secondLevelMap.put("field2","value2");
         rootMap.put("field3",secondLevelMap);
         rootMap.put("field4","Hello".getBytes());
-        byte[] mybytes = encoder.encode(rootMap);
-        Map decodedObj = (Map)encoder.decode(mybytes);
+        byte[] mybytes = encoder.encodeNoHeader(rootMap);
+        Map decodedObj = (Map)encoder.decodeNoHeader(mybytes);
         assert decodedObj.get("field1").equals(5);
-        assert decodedObj.get("field4") instanceof ByteBuffer;
-        ByteBuffer buffer = (ByteBuffer) decodedObj.get("field4");
-        byte [] bytes = new byte[buffer.remaining()];
-        buffer.get(bytes);
+        assert decodedObj.get("field4") instanceof byte[];
+        byte[] bytes = (byte[]) decodedObj.get("field4");
         assert new String(bytes).equals("Hello");
     }
     @Test
@@ -36,12 +34,10 @@ public class EncodingTest {
         secondLevelMap.put("field2","value2");
         rootMap.put("field3",secondLevelMap);
         rootMap.put("field4","Hello".getBytes());
-        byte[] mybytes = encoder.encode(rootMap);
-        Map decodedObj = (Map)encoder.decode(mybytes);
+        byte[] mybytes = encoder.encodeNoHeader(rootMap);
+        Map decodedObj = (Map)encoder.decodeNoHeader(mybytes);
         assert decodedObj.get("field1").equals(5);
-        ByteBuffer buffer = (ByteBuffer) decodedObj.get("field4");
-        byte [] bytes = new byte[buffer.remaining()];
-        buffer.get(bytes);
+        byte[] bytes = (byte[]) decodedObj.get("field4");
         assert new String(bytes).equals("Hello");
     }
     @Test
@@ -53,8 +49,8 @@ public class EncodingTest {
         secondLevelMap.put("field2","value2");
         rootMap.put("field3",secondLevelMap);
         rootMap.put("field4","Hello".getBytes());
-        byte[] mybytes = encoder.encode(rootMap);
-        Map decodedObj = (Map)encoder.decode(mybytes);
+        byte[] mybytes = encoder.encodeNoHeader(rootMap);
+        Map decodedObj = (Map)encoder.decodeNoHeader(mybytes);
         assert decodedObj.get("field1").equals(5);
     }
 }

@@ -6,6 +6,7 @@ import hkube.algo.ICommandSender;
 import hkube.communication.DataServer;
 import hkube.communication.zmq.ZMQServer;
 import hkube.encoding.EncodingManager;
+import hkube.model.HeaderContentPair;
 import hkube.storage.StorageFactory;
 import hkube.storage.TaskStorage;
 import org.apache.logging.log4j.LogManager;
@@ -212,15 +213,15 @@ public class Wrapper implements ICommandSender {
                                 dataServer.addTaskData(taskId, res);
                                 Collection savePaths =(Collection) ((Map)mArgs.get("info")).get("savePaths");
                                 Map metaData = dataAdapter.getMetadata(savePaths, res);
-                                byte [] encodedData = dataAdapter.encode(res, mConfig.commConfig.getEncodingType());
-                                int resEncodedSize = encodedData.length;
+                                HeaderContentPair encodedData = dataAdapter.encode(res, mConfig.commConfig.getEncodingType());
+                                int resEncodedSize = encodedData.getContent().length;
                                 Map resultStoringInfo = dataAdapter.getStoringInfo(mConfig, jobId, taskId, metaData, resEncodedSize);
                                 if(logger.isDebugEnabled()){
                                     logger.debug("result storing data" + resultStoringInfo);
                                 }
                                 if(!isDebugMode) {
                                     sendMessage("storing", resultStoringInfo, false);
-                                    taskResultStorage.putEncoded((String) mArgs.get("jobId"), taskId, encodedData);
+                                    taskResultStorage.put((String) mArgs.get("jobId"), taskId, encodedData);
                                     sendMessage("done", new HashMap(), false);
                                 }else{
                                     sendMessage("done",res,false);

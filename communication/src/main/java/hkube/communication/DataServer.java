@@ -1,9 +1,10 @@
 package hkube.communication;
 
 
-import hkube.encoding.Encoded;
+
 import hkube.encoding.EncodingManager;
 import hkube.encoding.IEncoder;
+import hkube.model.HeaderContentPair;
 import org.apache.commons.jxpath.JXPathContext;
 import org.json.JSONObject;
 import org.apache.commons.lang3.StringUtils;
@@ -18,10 +19,10 @@ public class DataServer implements IRequestListener {
     private static final Logger logger = LogManager.getLogger();
     IRequestServer communication;
     IEncoder encoder;
-    Encoded notAvailableError;
+    HeaderContentPair notAvailableError;
 
     private class DataCache {
-        Map<String, Encoded> dataByTaskIdMap = new HashMap();
+        Map<String, HeaderContentPair> dataByTaskIdMap = new HashMap();
         SortedMap<Long, String> tasksByTime = new TreeMap<Long, String>();
 
         private void removeOldestFromCache() {
@@ -39,7 +40,7 @@ public class DataServer implements IRequestListener {
             tasksByTime.put(new Date().getTime(), taskId);
         }
 
-        public Encoded getData(String taskId) {
+        public HeaderContentPair getData(String taskId) {
             return dataByTaskIdMap.get(taskId);
         }
 
@@ -64,7 +65,7 @@ public class DataServer implements IRequestListener {
     public void onRequest(byte[] request) {
         try {
             logger.debug("Got Request");
-            Map requestInfo = (Map) encoder.decode(request);
+            Map requestInfo = (Map) encoder.decodeNoHeader(request);
             if (logger.isDebugEnabled()) {
                 logger.debug("Got request " + new JSONObject((requestInfo)));
             }
@@ -72,14 +73,14 @@ public class DataServer implements IRequestListener {
             List<String> tasks = (List) requestInfo.get("tasks");
 
             if (tasks == null) {
-                Encoded encodedError = this.encoder.encodeSeparately(createError("unknown", "Request must contain either task or tasks attribute"));
+                HeaderContentPair encodedError = this.encoder.encodeSeparately(createError("unknown", "Request must contain either task or tasks attribute"));
                 List<HeaderContentPair> reply = new ArrayList();
-                reply.add(new HeaderContentPair(encodedError.getHeader(), encodedError.getContent()));
+                reply.add(new HeaderContentPair(encodedError.getHeaderAsBytes(), encodedError.getContent()));
                 communication.reply(reply);
             } else {
-                List<Encoded> items = tasks.stream().map((task) -> getResult(task)).collect(Collectors.toList());
+                List<HeaderContentPair> items = tasks.stream().map((task) -> getResult(task)).collect(Collectors.toList());
                 List<HeaderContentPair> reply = items.stream().map(item ->
-                        new HeaderContentPair(item.getHeader(), item.getContent())
+                        new HeaderContentPair(item.getHeaderAsBytes(), item.getContent())
                 ).collect(Collectors.toList());
                 if (logger.isDebugEnabled()) {
                     logger.debug("Responding " + reply);
@@ -88,15 +89,15 @@ public class DataServer implements IRequestListener {
             }
         } catch (Throwable e) {
             List<HeaderContentPair> reply = new ArrayList();
-            Encoded encodedError = encoder.encodeSeparately(createError("unknown", "Unexpected error " + e.getMessage()));
-            reply.add(new HeaderContentPair(encodedError.getHeader(), encodedError.getContent()));
+            HeaderContentPair encodedError = encoder.encodeSeparately(createError("unknown", "Unexpected error " + e.getMessage()));
+            reply.add(new HeaderContentPair(encodedError.getHeaderAsBytes(), encodedError.getContent()));
             logger.warn("Data server responding:" + reply);
             communication.reply(reply);
         }
     }
 
-    private Encoded getResult(String taskId) {
-        Encoded data = dataCache.getData(taskId);
+    private HeaderContentPair getResult(String taskId) {
+        HeaderContentPair data = dataCache.getData(taskId);
         if (data == null) {
             data = notAvailableError;
         }

@@ -1,14 +1,16 @@
 package hkube.encoding;
 
 
+import hkube.model.Header;
+import hkube.model.HeaderContentPair;
+
 public interface IEncoder {
 
 
-    byte[] encode(Object obj);
-    Encoded encodeSeparately(Object obj);
+
+    HeaderContentPair encodeSeparately(Object obj);
     byte[] encodeNoHeader(Object obj);
 
-    public Object decode(byte[] data);
     public Object decodeSeparately(Header header, byte[] data);
     Object decodeNoHeader(byte[] data);
     public Integer getEncodingType();

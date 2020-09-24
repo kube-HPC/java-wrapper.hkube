@@ -1,5 +1,8 @@
 package hkube.encoding;
 
+import hkube.model.Header;
+import hkube.model.HeaderContentPair;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,13 +27,10 @@ public class EncodingManager extends BaseEncoder implements IEncoder {
         return encoder.decodeNoHeader(data);
     }
 
-    @Override
-    public byte[] encode(Object obj) {
-        return encodings.get(defaultEncoding).encode(obj);
-    }
+
 
     @Override
-    public Encoded encodeSeparately(Object obj) {
+    public HeaderContentPair encodeSeparately(Object obj) {
         return encodings.get(defaultEncoding).encodeSeparately(obj);
     }
 
@@ -39,19 +39,6 @@ public class EncodingManager extends BaseEncoder implements IEncoder {
         return encodings.get(defaultEncoding).encodeNoHeader(obj);
     }
 
-    public Object decode(byte[] data) {
-        Header info = getInfo(data);
-        if (info == null) {
-            IEncoder encoder = encodings.get(defaultEncoding);
-            return decodeNoHeader(data, encoder);
-        }
-        if (!info.isEncoded()) {
-            return getByteBufferNoHeader(data);
-        } else {
-            IEncoder encoder = encodings.get(info.getEncodingType().toString());
-            return encoder.decode(data);
-        }
-    }
 
     @Override
     public Object decodeSeparately(Header header, byte[] data) {

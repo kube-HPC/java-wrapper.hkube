@@ -1,13 +1,17 @@
 package hkube.storage.fs;
 
+import hkube.encoding.EncodingManager;
+import hkube.model.HeaderContentPair;
 import hkube.storage.ISimplePathStorage;
 import hkube.storage.IStorageConfig;
 import hkube.utils.Config;
 import org.junit.After;
 import org.junit.Test;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.List;
+
 import static org.junit.Assert.assertThrows;
 
 public class TestFS {
@@ -24,8 +28,10 @@ public class TestFS {
     public void testPutGet() throws FileNotFoundException {
         ISimplePathStorage adapter = new FSAdapter();
         adapter.setConfig(storageConfig);
-        adapter.put("dir1" + File.separator + "dir2" + File.separator + "Stam", "Kloom".getBytes());
-        String output = new String(adapter.get("dir1" + File.separator + "dir2" + File.separator + "Stam"));
+        EncodingManager encodingManager = new EncodingManager("msgpack");
+        byte[] header = encodingManager.createHeader(false);
+        adapter.put("dir1" + File.separator + "dir2" + File.separator + "Stam", new HeaderContentPair(header, "Kloom".getBytes()));
+        String output = new String(adapter.get("dir1" + File.separator + "dir2" + File.separator + "Stam").getContent());
         assert output.equals("Kloom");
     }
 
@@ -33,8 +39,8 @@ public class TestFS {
     public void testList() throws FileNotFoundException {
         ISimplePathStorage adapter = new FSAdapter();
         adapter.setConfig(storageConfig);
-        adapter.put("dir1" + File.separator + "dir2" + File.separator + "Stam", "Kloom".getBytes());
-        adapter.put("dir1" + File.separator + "dir3" + File.separator + "Stam", "Kloom".getBytes());
+        adapter.put("dir1" + File.separator + "dir2" + File.separator + "Stam", new HeaderContentPair(null, "Kloom".getBytes()));
+        adapter.put("dir1" + File.separator + "dir3" + File.separator + "Stam", new HeaderContentPair(null, "Kloom".getBytes()));
         List dirContent = adapter.list("dir1");
         assert dirContent.size() == 2;
         assert dirContent.contains(File.separator + "dir1" + File.separator + "dir3" + File.separator + "Stam");
@@ -45,7 +51,7 @@ public class TestFS {
     public void notFoundException() {
         assertThrows(FileNotFoundException.class, () -> {
 
-            ISimplePathStorage adapter =new FSAdapter();
+            ISimplePathStorage adapter = new FSAdapter();
             adapter.setConfig(storageConfig);
             adapter.get("dir1" + File.separator + "dir2" + File.separator + "Ain");
         });

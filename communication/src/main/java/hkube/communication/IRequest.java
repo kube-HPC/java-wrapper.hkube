@@ -1,5 +1,7 @@
 package hkube.communication;
 
+import hkube.model.HeaderContentPair;
+
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 

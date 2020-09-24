@@ -1,5 +1,7 @@
 package hkube.storage.fs;
 
+import hkube.model.Header;
+import hkube.model.HeaderContentPair;
 import hkube.storage.ISimplePathStorage;
 import hkube.storage.IStorageConfig;
 
@@ -8,20 +10,23 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class FSAdapter implements ISimplePathStorage {
-    public static ISimplePathStorage getInstance(){
+    public static ISimplePathStorage getInstance() {
         return new FSAdapter();
     }
+
     File basePath;
+
     public FSAdapter() {
 
     }
 
-    public void put(String path, byte[] data) {
+    public void put(String path, HeaderContentPair data) {
         File file = new File(basePath.getAbsoluteFile() + File.separator + path);
         File parentDir = new File(file.getParent());
         if (!parentDir.isDirectory()) {
@@ -33,7 +38,11 @@ public class FSAdapter implements ISimplePathStorage {
         }
         try {
             FileOutputStream fos = new FileOutputStream(file);
-            fos.write(data);
+            byte[] header = data.getHeaderAsBytes();
+            if (header != null) {
+                fos.write(header);
+            }
+            fos.write(data.getContent());
             fos.close();
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
@@ -42,15 +51,38 @@ public class FSAdapter implements ISimplePathStorage {
         }
     }
 
-    public byte[] get(String path) throws FileNotFoundException {
+    public HeaderContentPair get(String path) throws FileNotFoundException {
+
         File file = new File(basePath.getAbsoluteFile() + File.separator + path);
         if (!file.exists()) {
             throw new FileNotFoundException(file.getAbsolutePath() + " does not exist");
         }
         FileInputStream fis = new FileInputStream(file);
         try {
+//           byte[] data = fis.readAllBytes();
+            byte[] versionAndSize = new byte[2];
+
+            fis.read(versionAndSize);
+            int headerSize = (int) versionAndSize[1];
+            if (headerSize > 3) {
+                byte[] restOfHeader = new byte[headerSize - 2];
+                int readBytes = fis.read(restOfHeader, 0, headerSize - 2);
+                if (readBytes >= headerSize - 2) {
+                    String magicNumber = new String(Arrays.copyOfRange(restOfHeader, restOfHeader.length - Header.MAGIC_NUMBER.length, restOfHeader.length));
+                    if (magicNumber.equals(new String(Header.MAGIC_NUMBER))) {
+                        byte[] data = fis.readAllBytes();
+                        byte[] header = new byte[headerSize];
+                        System.arraycopy(versionAndSize, 0, header, 0, 2);
+                        System.arraycopy(restOfHeader, 0, header, 2, headerSize - 2);
+                        return new HeaderContentPair(header, data);
+                    }
+                }
+            }
+            fis.close();
+            fis = new FileInputStream(file);
             byte[] data = fis.readAllBytes();
-            return data;
+            return new HeaderContentPair(null, data);
+
         } catch (IOException e) {
             throw new RuntimeException("Failed to read" + file.getAbsolutePath());
         }

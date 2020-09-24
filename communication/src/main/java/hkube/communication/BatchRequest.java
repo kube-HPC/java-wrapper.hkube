@@ -1,9 +1,8 @@
 package hkube.communication;
 
+import hkube.model.HeaderContentPair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 import java.util.*;
 import java.util.concurrent.TimeoutException;
@@ -37,6 +36,7 @@ public class BatchRequest extends DataRequest {
             Object currentItem = itemIterator.next();
             if (currentItem instanceof Map && (((Map) currentItem).get("hkube_error") == null)) {
                 reslutMap.put((String) tasks.get(i), currentItem);
+                i++;
             }
         }
         return reslutMap;

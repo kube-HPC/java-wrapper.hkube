@@ -1,5 +1,6 @@
 package hkube.storage.test;
 
+import hkube.model.HeaderContentPair;
 import hkube.storage.ISimplePathStorage;
 import hkube.storage.IStorageConfig;
 
@@ -15,13 +16,13 @@ public class TESTAdapter implements ISimplePathStorage {
         return new TESTAdapter();
     }
     @Override
-    public void put(String path, byte[] data) {
+    public void put(String path, HeaderContentPair data) {
         cach.put(path,data);
     }
 
     @Override
-    public byte[] get(String path) throws FileNotFoundException {
-        return (byte[]) cach.get(path);
+    public HeaderContentPair get(String path) throws FileNotFoundException {
+        return (HeaderContentPair) cach.get(path);
     }
 
     @Override
