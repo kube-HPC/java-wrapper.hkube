@@ -67,7 +67,7 @@ public class WrapperConfig extends Config {
 
     class StorageConfig extends Config implements IStorageConfig {
         public String getStorageType() {
-            return getStrEnvValue("STORAGE_TYPE", "fs");
+            return getStrEnvValue("DEFAULT_STORAGE", "fs");
         }
 
         public String getClusterName() {
