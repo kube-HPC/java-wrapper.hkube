@@ -34,7 +34,7 @@ public class BatchRequest extends DataRequest {
         int i = 0;
         while (itemIterator.hasNext()) {
             Object currentItem = itemIterator.next();
-            if (currentItem instanceof Map && (((Map) currentItem).get("hkube_error") == null)) {
+            if (currentItem instanceof  byte[] || (currentItem instanceof Map && (((Map) currentItem).get("hkube_error") == null))) {
                 reslutMap.put((String) tasks.get(i), currentItem);
                 i++;
             }

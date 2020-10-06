@@ -1,10 +1,11 @@
 package hkube.algo.wrapper;
 
+import hkube.caching.DecodedCache;
+import hkube.caching.EncodedCache;
+import hkube.model.ObjectAndSize;
 import hkube.storage.TaskStorage;
 import org.apache.commons.jxpath.JXPathContext;
 import org.apache.commons.lang3.StringUtils;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 import java.io.FileNotFoundException;
 import java.util.Collection;
@@ -13,7 +14,7 @@ import java.util.Map;
 import java.util.StringTokenizer;
 
 public class StorageProxy {
-    HashMap cache = new HashMap();
+    DecodedCache decodedCache = new DecodedCache();
     TaskStorage storage;
 
     StorageProxy(TaskStorage storage) {
@@ -21,20 +22,21 @@ public class StorageProxy {
     }
 
     public Object get(String path) throws FileNotFoundException {
-        Object result = cache.get(path);
+        Object result = decodedCache.get(path);
         if (result == null) {
-            result = storage.getByFullPath(path);
-            cache.put(path, result);
+            ObjectAndSize objectAndSize = storage.getByFullPath(path);
+            result = objectAndSize.getValue();
+            decodedCache.put(path, objectAndSize.getValue(),objectAndSize.getSize());
         }
         return result;
     }
 
     public Object get(String jobId, String taskId) throws FileNotFoundException {
         String path = storage.createPath(jobId, taskId);
-        Object result = cache.get(path);
+        Object result = decodedCache.get(path);
         if (result == null) {
-            result = storage.get(jobId, taskId);
-            cache.put(path, result);
+            ObjectAndSize objectAndSize  = storage.get(jobId, taskId);
+            decodedCache.put(path, objectAndSize.getValue(),objectAndSize.getSize());
         }
         return result;
     }
@@ -90,9 +92,5 @@ public class StorageProxy {
             value = storedData;
         }
         return value;
-    }
-
-    public void clear() {
-        cache = new HashMap();
     }
 }

@@ -3,6 +3,7 @@ package hkube.algo.wrapper;
 import hkube.algo.CommandResponseListener;
 import hkube.algo.HKubeAPIImpl;
 import hkube.algo.ICommandSender;
+import hkube.caching.Cache;
 import hkube.communication.DataServer;
 import hkube.communication.zmq.ZMQServer;
 import hkube.encoding.EncodingManager;
@@ -39,6 +40,7 @@ public class Wrapper implements ICommandSender {
     private static final Logger logger = LogManager.getLogger();
 
     public Wrapper(IAlgorithm algorithm, WrapperConfig config) {
+        Cache.init(config.commConfig.getMaxCacheSize());
         mConfig = config;
         dataAdapter = new DataAdapter(mConfig);
         hkubeAPI = new HKubeAPIImpl(this, dataAdapter);
@@ -210,10 +212,11 @@ public class Wrapper implements ICommandSender {
                                 logger.debug("After running algorithm");
                                 String taskId = (String) mArgs.get("taskId");
                                 String jobId = (String) mArgs.get("jobId");
-                                dataServer.addTaskData(taskId, res);
+
                                 Collection savePaths =(Collection) ((Map)mArgs.get("info")).get("savePaths");
                                 Map metaData = dataAdapter.getMetadata(savePaths, res);
                                 HeaderContentPair encodedData = dataAdapter.encode(res, mConfig.commConfig.getEncodingType());
+                                dataServer.addTaskData(taskId, encodedData);
                                 int resEncodedSize = encodedData.getContent().length;
                                 Map resultStoringInfo = dataAdapter.getStoringInfo(mConfig, jobId, taskId, metaData, resEncodedSize);
                                 if(logger.isDebugEnabled()){

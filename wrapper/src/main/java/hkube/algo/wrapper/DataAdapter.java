@@ -35,9 +35,6 @@ public class DataAdapter {
 
     public Collection placeData(Map args) {
         Boolean useCache = (Boolean) args.get("useCache");
-        if (!useCache) {
-            storageProxy.clear();
-        }
         Map storage = (Map) args.get("storage");
         Map<String, Object> results = new HashMap<>();
         Object flatInput = args.get("flatInput");

@@ -2,6 +2,7 @@ package hkube.storage;
 
 import hkube.model.Header;
 import hkube.model.HeaderContentPair;
+import hkube.model.ObjectAndSize;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -17,7 +18,7 @@ public class TaskStorage extends BaseStorage {
     public void put(String jobId, String taskId, HeaderContentPair data) {
         super.putEncoded(createPath(jobId, taskId), data);
     }
-    public Object get(String jobId, String taskId) throws FileNotFoundException {
+    public ObjectAndSize get(String jobId, String taskId) throws FileNotFoundException {
         return super.get(createPath(jobId, taskId));
     }
 

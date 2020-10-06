@@ -8,6 +8,7 @@ import hkube.encoding.EncodingManager;
 import hkube.encoding.IEncoder;
 import hkube.model.Header;
 import hkube.model.HeaderContentPair;
+import hkube.model.ObjectAndSize;
 
 public abstract class BaseStorage {
     ISimplePathStorage adapter;
@@ -27,20 +28,27 @@ public abstract class BaseStorage {
         adapter.put(enhancePath(path), data);
     }
 
-    Object get(String path) throws FileNotFoundException {
+    ObjectAndSize get(String path) throws FileNotFoundException {
         HeaderContentPair encoded = adapter.get(enhancePath(path));
-        if(encoded.getHeader().isEncoded()){
-            if(encoded.getHeader() != null){
-                return encoder.decodeSeparately(encoded.getHeader(),encoded.getContent());
+        Integer size = encoded.getContent().length;
+        if (encoded.getHeader().isEncoded()) {
+            if (encoded.getHeader() != null) {
+                Object value =  encoder.decodeSeparately(encoded.getHeader(), encoded.getContent());
+                return  new ObjectAndSize(value,size);
             }
-            return  encoder.decodeNoHeader(encoded.getContent());
+            Object value = encoder.decodeNoHeader(encoded.getContent());
+            return  new ObjectAndSize(value,size);
         }
-        return encoded.getContent();
+
+        Object value = encoded.getContent();
+        return   new ObjectAndSize(value,size);
     }
 
-    public Object getByFullPath(String path) throws FileNotFoundException {
+    public ObjectAndSize getByFullPath(String path) throws FileNotFoundException {
         HeaderContentPair encoded = adapter.get(path);
-        return encoder.decodeNoHeader(encoded.getContent());
+        Integer size = encoded.getContent().length;
+        Object value = encoder.decodeNoHeader(encoded.getContent());
+        return new ObjectAndSize(value, size);
     }
 
     List<String> list(String path) {

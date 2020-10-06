@@ -2,6 +2,7 @@ package hkube.communication;
 
 
 
+import hkube.caching.EncodedCache;
 import hkube.encoding.EncodingManager;
 import hkube.encoding.IEncoder;
 import hkube.model.HeaderContentPair;
@@ -21,32 +22,9 @@ public class DataServer implements IRequestListener {
     IEncoder encoder;
     HeaderContentPair notAvailableError;
 
-    private class DataCache {
-        Map<String, HeaderContentPair> dataByTaskIdMap = new HashMap();
-        SortedMap<Long, String> tasksByTime = new TreeMap<Long, String>();
 
-        private void removeOldestFromCache() {
-            long oldestTime = tasksByTime.firstKey();
-            String taskId = tasksByTime.get(oldestTime);
-            tasksByTime.remove(oldestTime);
-            dataByTaskIdMap.remove(taskId);
-        }
 
-        public void put(String taskId, Object data) {
-            if (dataByTaskIdMap.size() == conf.getMaxCacheSize()) {
-                removeOldestFromCache();
-            }
-            dataByTaskIdMap.put(taskId, encoder.encodeSeparately(data));
-            tasksByTime.put(new Date().getTime(), taskId);
-        }
-
-        public HeaderContentPair getData(String taskId) {
-            return dataByTaskIdMap.get(taskId);
-        }
-
-    }
-
-    DataCache dataCache = new DataCache();
+    EncodedCache dataCache = new  EncodedCache ();
     ICommConfig conf;
 
     public DataServer(IRequestServer communication, ICommConfig conf) {
@@ -57,8 +35,8 @@ public class DataServer implements IRequestListener {
         this.conf = conf;
     }
 
-    public void addTaskData(String taskId, Object data) {
-        this.dataCache.put(taskId, data);
+    public void addTaskData(String taskId, HeaderContentPair data) {
+        this.dataCache.put(taskId, data,data.getContent().length);
     }
 
     @Override
@@ -97,7 +75,7 @@ public class DataServer implements IRequestListener {
     }
 
     private HeaderContentPair getResult(String taskId) {
-        HeaderContentPair data = dataCache.getData(taskId);
+        HeaderContentPair data = dataCache.get(taskId);
         if (data == null) {
             data = notAvailableError;
         }
