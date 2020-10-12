@@ -59,11 +59,10 @@ public class FSAdapter implements ISimplePathStorage {
         }
         FileInputStream fis = new FileInputStream(file);
         try {
-//           byte[] data = fis.readAllBytes();
             byte[] versionAndSize = new byte[2];
 
             fis.read(versionAndSize);
-            int headerSize = (int) versionAndSize[1];
+            int headerSize = versionAndSize[1];
             if (headerSize > 3) {
                 byte[] restOfHeader = new byte[headerSize - 2];
                 int readBytes = fis.read(restOfHeader, 0, headerSize - 2);

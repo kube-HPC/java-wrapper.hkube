@@ -5,7 +5,7 @@ import hkube.communication.ICommConfig;
 import hkube.communication.IRequestListener;
 import hkube.communication.IRequestServer;
 
-import org.zeromq.SocketType;
+
 import org.zeromq.ZMQ;
 import org.zeromq.ZContext;
 
@@ -22,8 +22,8 @@ public class ZMQServer implements IRequestServer {
 
     public ZMQServer(ICommConfig config) {
         ZContext context = new ZContext();
-        socket = context.createSocket(SocketType.REP);
-        pingSocket = context.createSocket(SocketType.REP);
+        socket = context.createSocket(ZMQ.REP);
+        pingSocket = context.createSocket(ZMQ.REP);
         socket.bind("tcp://*:" + config.getListeningPort());
         pingSocket.bind("tcp://*:" + (Integer.valueOf(config.getListeningPort()) + 1));
         thread = new Thread(new Runnable() {
@@ -47,7 +47,7 @@ public class ZMQServer implements IRequestServer {
                     // Block until a message is received
                     byte[] request = pingSocket.recv(0);
                     if (new String(request).equals("ping")) {
-                        pingSocket.send("pong".getBytes());
+                        pingSocket.send("pong".getBytes(),0);
                     }
                 }
             }

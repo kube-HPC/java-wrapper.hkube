@@ -5,7 +5,7 @@ import hkube.model.HeaderContentPair;
 import hkube.communication.ICommConfig;
 import hkube.communication.IRequest;
 import org.apache.logging.log4j.LogManager;
-import org.zeromq.SocketType;
+
 import org.zeromq.ZMQ;
 import org.zeromq.ZContext;
 import org.apache.logging.log4j.Logger;
@@ -25,8 +25,8 @@ public class ZMQRequest implements IRequest {
     public ZMQRequest(String host, String port, ICommConfig config) {
         ZContext context = new ZContext();
 
-        socket = context.createSocket(SocketType.REQ);
-        pingSocket = context.createSocket(SocketType.REQ);
+        socket = context.createSocket(ZMQ.REQ);
+        pingSocket = context.createSocket(ZMQ.REQ);
         timeOut = config.getTimeout();
         networkTimeOut = config.getNetworkTimeout();
 
@@ -50,17 +50,17 @@ public class ZMQRequest implements IRequest {
         socket.setSendTimeOut(timeOut);
         socket.send(data, 0);
         List<HeaderContentPair> headerContentPairs = new ArrayList<HeaderContentPair>();
-        byte [] header = socket.recv();
-        byte [] body = socket.recv();
-        headerContentPairs.add(new HeaderContentPair(header,body));
+        byte[] header = socket.recv();
+        byte[] body = socket.recv();
+        headerContentPairs.add(new HeaderContentPair(header, body));
         boolean hasMore = socket.hasReceiveMore();
-        while(hasMore){
+        while (hasMore) {
             header = socket.recv();
             body = socket.recv();
-            headerContentPairs.add(new HeaderContentPair(header,body));
+            headerContentPairs.add(new HeaderContentPair(header, body));
             hasMore = socket.hasReceiveMore();
         }
-        if(header == null || body == null){
+        if (header == null || body == null) {
             throw new TimeoutException();
         }
         logger.debug("reply from " + remoteURL);
