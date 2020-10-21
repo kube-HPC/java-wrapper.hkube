@@ -216,14 +216,16 @@ public class Wrapper implements ICommandSender {
                                 Collection savePaths =(Collection) ((Map)mArgs.get("info")).get("savePaths");
                                 Map metaData = dataAdapter.getMetadata(savePaths, res);
                                 HeaderContentPair encodedData = dataAdapter.encode(res, mConfig.commConfig.getEncodingType());
-                                dataServer.addTaskData(taskId, encodedData);
+                                boolean dataAdded = dataServer.addTaskData(taskId, encodedData);
                                 int resEncodedSize = encodedData.getContent().length;
                                 Map resultStoringInfo = dataAdapter.getStoringInfo(mConfig, jobId, taskId, metaData, resEncodedSize);
                                 if(logger.isDebugEnabled()){
                                     logger.debug("result storing data" + resultStoringInfo);
                                 }
                                 if(!isDebugMode) {
-                                    sendMessage("storing", resultStoringInfo, false);
+                                    if(dataAdded) {
+                                        sendMessage("storing", resultStoringInfo, false);
+                                    }
                                     taskResultStorage.put((String) mArgs.get("jobId"), taskId, encodedData);
                                     sendMessage("done", new HashMap(), false);
                                 }else{

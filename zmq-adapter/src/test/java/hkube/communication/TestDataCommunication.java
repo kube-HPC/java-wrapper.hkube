@@ -4,6 +4,7 @@ import hkube.caching.Cache;
 import hkube.communication.zmq.ZMQRequest;
 import hkube.encoding.EncodingManager;
 import hkube.model.HeaderContentPair;
+import hkube.model.ObjectAndSize;
 import org.json.JSONException;
 import org.json.JSONObject;
 import hkube.communication.zmq.ZMQServer;
@@ -52,10 +53,11 @@ public class TestDataCommunication {
         ds.addTaskData("taskId2",pair);
         zmqr = new ZMQRequest("localhost", conf.getListeningPort(), conf);
         SingleRequest request = new SingleRequest(zmqr,"taskId2","msgpack");
-        Object result =   request.send();
+        ObjectAndSize result =   (ObjectAndSize)request.send();
+
         request.close();
-        assert ((byte[])result)[1] == 5;
-        assert ((byte[])result)[2] == 6;
+        assert ((byte[])result.getValue())[1] == 5;
+        assert ((byte[])result.getValue())[2] == 6;
     }
 
     @Test

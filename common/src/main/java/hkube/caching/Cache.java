@@ -1,6 +1,5 @@
 package hkube.caching;
 
-import hkube.model.HeaderContentPair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -12,11 +11,11 @@ import java.util.Map;
 
 public abstract class Cache<T> {
     private final Logger logger = LogManager.getLogger(this.getClass());
-    static Integer sizeLimit = null;
+    static Long sizeLimit = null;
     static Integer accumulatingSize = 0;
     static Map<String, CacheItem> db = new HashMap();
     public static void init(Integer cacheLimit){
-        sizeLimit = cacheLimit * 1000 * 1000;
+        sizeLimit = Long.valueOf(cacheLimit) * 1000 * 1000;
         db = new HashMap();
         accumulatingSize = 0;
     }

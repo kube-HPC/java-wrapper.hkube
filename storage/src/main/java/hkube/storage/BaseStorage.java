@@ -32,22 +32,22 @@ public abstract class BaseStorage {
         HeaderContentPair encoded = adapter.get(enhancePath(path));
         Integer size = encoded.getContent().length;
         if (encoded.getHeader().isEncoded()) {
-            if (encoded.getHeader() != null) {
-                Object value =  encoder.decodeSeparately(encoded.getHeader(), encoded.getContent());
-                return  new ObjectAndSize(value,size);
-            }
-            Object value = encoder.decodeNoHeader(encoded.getContent());
-            return  new ObjectAndSize(value,size);
+            Object value = encoder.decodeSeparately(encoded.getHeader(), encoded.getContent());
+            return new ObjectAndSize(value, size);
         }
-
         Object value = encoded.getContent();
-        return   new ObjectAndSize(value,size);
+        return new ObjectAndSize(value, size);
     }
 
     public ObjectAndSize getByFullPath(String path) throws FileNotFoundException {
         HeaderContentPair encoded = adapter.get(path);
         Integer size = encoded.getContent().length;
-        Object value = encoder.decodeNoHeader(encoded.getContent());
+        Object value;
+        if (encoded.getHeader() != null && encoded.getHeader().isEncoded()) {
+            value = encoder.decodeNoHeader(encoded.getContent());
+        } else {
+            value = encoded.getContent();
+        }
         return new ObjectAndSize(value, size);
     }
 

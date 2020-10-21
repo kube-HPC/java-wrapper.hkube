@@ -40,6 +40,13 @@ public class StorageProxy {
         }
         return result;
     }
+    public void setToCache (String jobId, String taskId,Object value, Integer size) {
+        String path = storage.createPath(jobId, taskId);
+        setToCache(path,value,size);
+    }
+    public void setToCache(String path,Object value,Integer size){
+        decodedCache.put(path,value,size);
+    }
 
     public Object getInputParamFromStorage(Map storageInfo, String path) {
         String storageFullPath = (String) storageInfo.get("path");

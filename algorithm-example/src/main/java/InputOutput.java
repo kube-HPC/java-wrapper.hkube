@@ -20,19 +20,20 @@ public class InputOutput implements IAlgorithm {
 
 
     @Override
-    public Map Start(Map args, IHKubeAPI hkubeAPI) throws Exception {
+    public Object Start(Map args, IHKubeAPI hkubeAPI) throws Exception {
         if (logger.isDebugEnabled()) {
             logger.debug(args.toString());
         }
-
+        DevUtil util = new DevUtil();
+        util.printMemoryUsage("at algorithm start");
         List outputList = new ArrayList();
         Collection input = (Collection)args.get("input");
-        input.stream().forEach(item -> {
-            outputList.add(item);
-        });
-        Map output = new HashMap();
-        output.put("prevInput", outputList);
-        String index0 = null;
+//        input.stream().forEach(item -> {
+//            outputList.add(item);
+//        });
+//        Map output = new HashMap();
+//        output.put("prevInput", outputList);
+//        String index0 = null;
 //        try {
 //            if (input.size() > 0)
 //                index0 = input.iterator().next().toString();
@@ -44,7 +45,9 @@ public class InputOutput implements IAlgorithm {
 //            byte[] myBytes = new byte[numberOfbytes];
 //            output.put("addedBytes", myBytes);
 //        }
-        return output;
+        byte [] arr = (byte[]) input.iterator().next();
+        System.out.print("Output size " + arr.length);
+        return arr;
 
     }
 

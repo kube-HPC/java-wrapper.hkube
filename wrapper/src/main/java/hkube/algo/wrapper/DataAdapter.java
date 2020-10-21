@@ -6,6 +6,7 @@ import hkube.communication.SingleRequest;
 
 import hkube.encoding.EncodingManager;
 import hkube.model.HeaderContentPair;
+import hkube.model.ObjectAndSize;
 import hkube.storage.StorageFactory;
 import hkube.storage.TaskStorage;
 import org.apache.commons.lang3.StringUtils;
@@ -119,7 +120,9 @@ public class DataAdapter {
             }
             try {
                 if (singleRequest != null) {
-                    value = singleRequest.send();
+                    ObjectAndSize objectAndSize = (ObjectAndSize)singleRequest.send();
+                    value = objectAndSize.getValue();
+//                    storageProxy.setToCache();
                     value = storageProxy.getSpecificData(value, path);
                 } else {
                     Map<String, Object> batchReslut = batchRequest.send();

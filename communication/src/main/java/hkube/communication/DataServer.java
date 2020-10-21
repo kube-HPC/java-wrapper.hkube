@@ -1,7 +1,6 @@
 package hkube.communication;
 
 
-
 import hkube.caching.EncodedCache;
 import hkube.encoding.EncodingManager;
 import hkube.encoding.IEncoder;
@@ -23,8 +22,7 @@ public class DataServer implements IRequestListener {
     HeaderContentPair notAvailableError;
 
 
-
-    EncodedCache dataCache = new  EncodedCache ();
+    EncodedCache dataCache = new EncodedCache();
     ICommConfig conf;
 
     public DataServer(IRequestServer communication, ICommConfig conf) {
@@ -35,8 +33,8 @@ public class DataServer implements IRequestListener {
         this.conf = conf;
     }
 
-    public void addTaskData(String taskId, HeaderContentPair data) {
-        this.dataCache.put(taskId, data,data.getContent().length);
+    public boolean addTaskData(String taskId, HeaderContentPair data) {
+        return this.dataCache.put(taskId, data, data.getContent().length) == null;
     }
 
     @Override

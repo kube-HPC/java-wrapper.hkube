@@ -1,6 +1,7 @@
 package hkube.communication;
 
 import hkube.model.HeaderContentPair;
+import hkube.model.ObjectAndSize;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
@@ -24,6 +25,7 @@ public class SingleRequest extends DataRequest {
         }
         List <HeaderContentPair> headerContentPairs = requestAdapter.send(encoder.encodeNoHeader(map));
         HeaderContentPair pair = headerContentPairs.get(0);
+        Integer size = pair.getContent().length;
         Object decoded = encoder.decodeSeparately(pair.getHeader(),pair.getContent());
         if (logger.isDebugEnabled()) {
             Object result = toJSON(decoded);
@@ -53,6 +55,7 @@ public class SingleRequest extends DataRequest {
                 }
             }
         }
-        return decoded;
+        ObjectAndSize result = new ObjectAndSize(decoded,size);
+        return result;
     }
 }

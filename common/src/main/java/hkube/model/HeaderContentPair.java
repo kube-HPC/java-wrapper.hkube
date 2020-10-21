@@ -9,7 +9,12 @@ public class HeaderContentPair {
     byte[] content;
 
     public Header getHeader() {
-        return getHeader(header);
+        if(header != null) {
+            return getHeader(header);
+        }
+        else{
+            return null;
+        }
     }
     public byte[] getHeaderAsBytes() {
         return header;
