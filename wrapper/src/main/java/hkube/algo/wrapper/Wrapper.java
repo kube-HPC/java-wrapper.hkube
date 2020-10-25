@@ -225,8 +225,11 @@ public class Wrapper implements ICommandSender {
                                 if(!isDebugMode) {
                                     if(dataAdded) {
                                         sendMessage("storing", resultStoringInfo, false);
+                                        taskResultStorage.put((String) mArgs.get("jobId"), taskId, encodedData);
+                                    }else{
+                                        taskResultStorage.put((String) mArgs.get("jobId"), taskId, encodedData);
+                                        sendMessage("storing", resultStoringInfo, false);
                                     }
-                                    taskResultStorage.put((String) mArgs.get("jobId"), taskId, encodedData);
                                     sendMessage("done", new HashMap(), false);
                                 }else{
                                     sendMessage("done",res,false);

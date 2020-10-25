@@ -34,7 +34,7 @@ public class DataServer implements IRequestListener {
     }
 
     public boolean addTaskData(String taskId, HeaderContentPair data) {
-        return this.dataCache.put(taskId, data, data.getContent().length) == null;
+        return this.dataCache.put(taskId, data, data.getContent().length) != null;
     }
 
     @Override
