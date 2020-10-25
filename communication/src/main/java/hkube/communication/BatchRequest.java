@@ -1,6 +1,7 @@
 package hkube.communication;
 
 import hkube.model.HeaderContentPair;
+import hkube.model.ObjectAndSize;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -14,27 +15,31 @@ public class BatchRequest extends DataRequest {
         super(requestAdapter, tasks, encoding);
     }
 
-    public Map<String, Object> send() throws TimeoutException {
+    public Map<String, ObjectAndSize> send() throws TimeoutException {
         logger.info("Invoking batch from peer");
         HashMap map = new HashMap();
         if (tasks != null) {
             map.put("tasks", tasks);
         }
         List<HeaderContentPair> reply = requestAdapter.send(encoder.encodeNoHeader(map));
-        final List encoded = new ArrayList<>();
+        final List<ObjectAndSize> decodedList = new ArrayList<>();
         reply.stream().forEach(rep -> {
-            encoded.add(encoder.decodeSeparately(rep.getHeader(), rep.getContent()));
+            Object decoded = encoder.decodeSeparately(rep.getHeader(), rep.getContent());
+            ObjectAndSize objectAndSize = new ObjectAndSize(decoded,rep.getContent().length);
+            decodedList.add(objectAndSize);
         });
         if (logger.isDebugEnabled()) {
-            Object result = toJSON(encoded);
+            Object result = toJSON(decodedList);
             logger.debug(result);
         }
-        Map<String, Object> reslutMap = new HashMap<>();
-        Iterator itemIterator = encoded.iterator();
+        Map<String, ObjectAndSize> reslutMap = new HashMap<>();
+        Iterator<ObjectAndSize> itemIterator = decodedList.iterator();
         int i = 0;
         while (itemIterator.hasNext()) {
-            Object currentItem = itemIterator.next();
-            if (currentItem instanceof  byte[] || (currentItem instanceof Map && (((Map) currentItem).get("hkube_error") == null))) {
+            ObjectAndSize currentItem = itemIterator.next();
+            Object currentValue = currentItem.getValue();
+
+            if (currentValue instanceof  byte[] || (currentValue instanceof Map && (((Map) currentValue).get("hkube_error") == null))) {
                 reslutMap.put((String) tasks.get(i), currentItem);
                 i++;
             }

@@ -54,7 +54,15 @@ public class DataAdapter {
                     String jobId = (String) args.get("jobId");
                     if (item instanceof List) {
                         Map batchInfp = (Map) ((List) item).get(0);
-                        value = getData(batchInfp, jobId);
+                        if (batchInfp.get("tasks") != null) {
+                            value = getData(batchInfp, jobId);
+                        } else {
+                            final ArrayList arr = new ArrayList();
+                            ((List<Map>) item).stream().forEach(info -> {
+                                arr.add(getData(info, jobId));
+                            });
+                            value = arr;
+                        }
                     } else {
                         value = getData((Map) item, jobId);
                     }
@@ -120,21 +128,29 @@ public class DataAdapter {
             }
             try {
                 if (singleRequest != null) {
-                    ObjectAndSize objectAndSize = (ObjectAndSize)singleRequest.send();
+                    ObjectAndSize objectAndSize = (ObjectAndSize) singleRequest.send();
+                    Map storageInfo;
                     value = objectAndSize.getValue();
-//                    storageProxy.setToCache();
+                    if (single.get("storageInfo") != null) {
+                        storageInfo = (Map) single.get("storageInfo");
+                        logger.info("Getting single task result from storage");
+                        storageProxy.setToCache(storageInfo, value, objectAndSize.getSize());
+                    }
                     value = storageProxy.getSpecificData(value, path);
                 } else {
-                    Map<String, Object> batchReslut = batchRequest.send();
-                    List resultValues = batchReslut.values().stream().map(result -> {
+                    Map<String, ObjectAndSize> batchResult = batchRequest.send();
+                    List resultValues = batchResult.entrySet().stream().map(result -> {
+                        String taskId = result.getKey();
+                        Object currentValue = result.getValue().getValue();
+                        storageProxy.setToCache(taskId, jobId, currentValue, result.getValue().getSize());
                         if (path != null && !path.equals(""))
-                            return storageProxy.getSpecificData(result, path);
+                            return storageProxy.getSpecificData(currentValue, path);
                         else
-                            return result;
+                            return currentValue;
                     }).collect(Collectors.toList());
 
 
-                    List<String> missingTasks = tasks.stream().filter(taskId -> !batchReslut.containsKey(taskId)).collect(Collectors.toList());
+                    List<String> missingTasks = tasks.stream().filter(taskId -> !batchResult.containsKey(taskId)).collect(Collectors.toList());
                     logger.info("Got " + (tasks.size() - missingTasks.size()) + "valid task results from batch request");
                     value = missingTasks.stream().map((taskId) -> storageProxy.getInputParamFromStorage(jobId, taskId, path)).collect(Collectors.toList());
                     ((Collection) value).addAll(resultValues);

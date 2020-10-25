@@ -79,6 +79,7 @@ public class TestDataCommunication {
         BatchRequest request = new BatchRequest(zmqr,tasks,"msgpack");
         Map resultMap =   request.send();
         Object result = resultMap.get("taskId2");
+        result =((ObjectAndSize) result).getValue();        result =((ObjectAndSize) result).getValue();
         request.close();
         assert ((byte[])result)[1] == 5;
         assert ((byte[])result)[2] == 6;
@@ -89,6 +90,7 @@ public class TestDataCommunication {
         tasks.add("taskId1");
         request = new BatchRequest(zmqr,tasks,"msgpack");
         result = request.send();
+        result =((ObjectAndSize) result).getValue();
         request.close();
         JSONObject resultAsJson = new JSONObject((Map)result);
         assert resultAsJson.query("/taskId1/level1/level2/value2").equals("d2_l1_l2_value_2");

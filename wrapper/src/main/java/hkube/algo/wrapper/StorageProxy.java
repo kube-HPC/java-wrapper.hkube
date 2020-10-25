@@ -47,6 +47,10 @@ public class StorageProxy {
     public void setToCache(String path,Object value,Integer size){
         decodedCache.put(path,value,size);
     }
+    public void setToCache(Map storageInfo,Object value,Integer size){
+        String storageFullPath = (String) storageInfo.get("path");
+        setToCache(storageFullPath,value,size);
+    }
 
     public Object getInputParamFromStorage(Map storageInfo, String path) {
         String storageFullPath = (String) storageInfo.get("path");
