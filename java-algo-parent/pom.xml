@@ -3,13 +3,35 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <groupId>io.hkube</groupId>
     <artifactId>java-algo-parent</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>2..0-SNAPSHOT</version>
     <packaging>pom</packaging>
+    <name>Hkube Java Algorithm parent pom</name>
+    <description>Pom to be used as parent of any java written algorithm maven project pom</description>
+    <url>hkube.io</url>
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>http://www.opensource.org/licenses/mit-license.php</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <scm>
+        <connection>scm:git:git://github.com/kube-HPC/java-wrapper.hkube.git</connection>
+        <developerConnection>scm:git:ssh://github.com:kube-HPC/java-wrapper.hkube.git</developerConnection>
+        <url>https://github.com/kube-HPC/java-wrapper.hkube/tree/master</url>
+    </scm>
+    <developers>
+        <developer>
+            <name>Golan Hallel</name>
+            <email>golanlia@gmail.com</email>
+            <organization>hkube</organization>
+            <organizationUrl>https://github.com/kube-HPC</organizationUrl>
+        </developer>
+    </developers>
     <properties>
-        <revision>1.0-SNAPSHOT</revision>
+        <revision>2..0-SNAPSHOT</revision>
     </properties>
     <distributionManagement>
         <snapshotRepository>
@@ -44,7 +66,7 @@
                     <dependency>
                         <groupId>io.hkube</groupId>
                         <artifactId>algorithm-deployment-descriptor</artifactId>
-                        <version>1.0-SNAPSHOT</version>
+                        <version>2..0-SNAPSHOT</version>
                     </dependency>
                 </dependencies>
                 <configuration>
@@ -58,6 +80,19 @@
                         <phase>package</phase>
                         <goals>
                             <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -97,19 +132,22 @@
                                 <filter>
                                     <artifact>com.myproject.auto:*</artifact>
                                     <excludes>
-                                        <exclude>com/myproject/auto/**</exclude> <!--to exclude a set of classes from the project structure-->
+                                        <exclude>com/myproject/auto/**
+                                        </exclude> <!--to exclude a set of classes from the project structure-->
                                     </excludes>
                                 </filter>
                                 <filter>
                                     <artifact>org:*</artifact>
                                     <excludes>
-                                        <exclude>org/**</exclude> <!--though the artifact naming needs to be refined for this-->
+                                        <exclude>org/**
+                                        </exclude> <!--though the artifact naming needs to be refined for this-->
                                     </excludes>
                                 </filter>
                                 <filter>
                                     <artifact>com.google.common:**</artifact>
                                     <excludes>
-                                        <exclude>com/google/common/**</exclude> <!--exclude classes from the respective artifacts-->
+                                        <exclude>com/google/common/**
+                                        </exclude> <!--exclude classes from the respective artifacts-->
                                     </excludes>
                                 </filter>
                             </filters>
@@ -123,12 +161,12 @@
         <dependency>
             <groupId>io.hkube</groupId>
             <artifactId>interfaces</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>2..0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>io.hkube</groupId>
             <artifactId>algorithm-deployment-descriptor</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>2..0-SNAPSHOT</version>
         </dependency>
     </dependencies>
 </project>
