@@ -31,9 +31,9 @@ public class S3Adapter implements ISimplePathStorage {
 
     }
 
-    public void init(String accessKey, String secretKey) {
+    public void init(String accessKey, String secretKey,String endPoint) {
         AWSCredentials creds = new BasicAWSCredentials(accessKey, secretKey);
-        conn = AmazonS3ClientBuilder.standard().withCredentials(new AWSStaticCredentialsProvider(creds)).withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration("http://127.0.0.1:9000", Regions.DEFAULT_REGION.toString())).build();
+        conn = AmazonS3ClientBuilder.standard().withCredentials(new AWSStaticCredentialsProvider(creds)).withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endPoint, Regions.DEFAULT_REGION.toString())).build();
     }
 
 
@@ -97,7 +97,8 @@ public class S3Adapter implements ISimplePathStorage {
         IS3Config s3Config = (IS3Config) config.getTypeSpecificConfig();
         String accessKey = s3Config.getAccessKeyId();
         String secretKey = s3Config.getSecretAccessKey();
-        init(accessKey, secretKey);
+        String endPoint = s3Config.getS3EndPoint();
+        init(accessKey, secretKey,endPoint);
     }
 
     String getBucket(String completePath) {
