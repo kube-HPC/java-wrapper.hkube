@@ -106,6 +106,12 @@ public class WrapperConfig extends Config {
         public String getSecretAccessKey() {
             return getStrEnvValue("AWS_SECRET_ACCESS_KEY", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY");
         }
+
+        @Override
+        public String getS3EndPoint() {
+            return getStrEnvValue("S3_ENDPOINT_URL","http://127.0.0.1:9000");
+        }
+
     }
 
     public S3Config s3Config = new S3Config();
