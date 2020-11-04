@@ -12,12 +12,12 @@ import java.util.Map;
 public abstract class Cache<T> {
     private final Logger logger = LogManager.getLogger(this.getClass());
     static Long sizeLimit = null;
-    static Integer accumulatingSize = 0;
+    static Long accumulatingSize = null;
     static Map<String, CacheItem> db = new HashMap();
     public static void init(Integer cacheLimit){
         sizeLimit = Long.valueOf(cacheLimit) * 1000 * 1000;
         db = new HashMap();
-        accumulatingSize = 0;
+        accumulatingSize = Long.valueOf(0);
     }
 
 
@@ -53,7 +53,7 @@ public abstract class Cache<T> {
         }
         CacheItem item = createItem(key, value,size);
         db.put(key, item);
-        accumulatingSize += size;
+        accumulatingSize += Long.valueOf(size);
         return key;
     }
 
@@ -73,7 +73,7 @@ public abstract class Cache<T> {
             }
         }
         db.remove(oldestItem.getKey());
-        accumulatingSize -= oldestItem.getSize();
+        accumulatingSize -= Long.valueOf(oldestItem.getSize());
     }
 
     public Integer getNumberOfItems() {
