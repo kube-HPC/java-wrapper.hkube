@@ -3,7 +3,7 @@ Create a HKube java written algorithm.
 1. Create your development project.
    a) Access hkube artifacts.
 
-     Your java maven project will depend on 2 hkube artifacts:
+     Your java maven project will depend on 3 hkube artifacts:
      * io.hkube:java-algo-parent:1.3.02:pom
      * io.hkube:interfaces:1.3.02:jar
      * io.hkube:algorithm-deployment-descriptor:1.3.02:jar
