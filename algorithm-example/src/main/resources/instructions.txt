@@ -67,8 +67,11 @@ Create a HKube java written algorithm.
 3. Run algorithm locally (for debugging) and as part of a pipeline on the cluster.
 
     a. Main class.
-       Java main class is hkube.algo.wrapper.Main from artifact io.hkube:wrapper:1.3.02
-
+       Java main class is hkube.algo.wrapper.Main from artifact io.hkube:wrapper:1.3.02:wide
+       
+       If working in an enclosed environment you can download it using:
+       mvn dependency:get -Dartifact=io.hkube:wrapper:1.3.02:jar:wide -Ddest=wrapper.jar
+       
     b. Runtime ClassPath
 
        1) io.hkube:wrapper:1.3.02 and its dependencies.
