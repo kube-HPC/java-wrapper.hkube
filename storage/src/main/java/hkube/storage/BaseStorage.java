@@ -43,7 +43,7 @@ public abstract class BaseStorage {
         HeaderContentPair encoded = adapter.get(path);
         Integer size = encoded.getContent().length;
         Object value;
-        if (encoded.getHeader() != null && encoded.getHeader().isEncoded()) {
+        if (encoded.getHeader() == null || encoded.getHeader().isEncoded()) {
             value = encoder.decodeNoHeader(encoded.getContent());
         } else {
             value = encoded.getContent();
