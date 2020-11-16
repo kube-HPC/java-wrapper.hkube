@@ -5,8 +5,6 @@ import hkube.algo.ICommandSender;
 import hkube.algo.wrapper.DataAdapter;
 import hkube.algo.wrapper.WrapperConfig;
 import hkube.api.INode;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -33,7 +31,7 @@ public class HKubeAPITest {
                         Map storedResult =  new HashMap();
                         result.put("response", storedResult);
                         storedResult.put("storedResult", "5");
-                        listener.onCommand(Consts.subPipelineDone, result);
+                        listener.onCommand(Consts.subPipelineDone, result, false);
                     }
                 }).start();
             }
@@ -68,7 +66,7 @@ public class HKubeAPITest {
                         Map rawResult =  new HashMap();
                         rawResult.put("rawResult", "2");
                         result.put("response",rawResult);
-                        listener.onCommand(Consts.subPipelineDone, result);
+                        listener.onCommand(Consts.subPipelineDone, result, false);
                     }
                 }).start();
             }
@@ -104,7 +102,7 @@ public class HKubeAPITest {
                             Map rawResult =  new HashMap();
                             result.put("response", rawResult);
                             rawResult.put("rawResult", "2");
-                            listener.onCommand(Consts.subPipelineDone, result);
+                            listener.onCommand(Consts.subPipelineDone, result, false);
                         }
                     }).start();
                 }
@@ -118,7 +116,7 @@ public class HKubeAPITest {
                             Map algoResult =  new HashMap();
                             result.put("response", algoResult);
                             algoResult.put("algoResult", "3");
-                            listener.onCommand(Consts.algorithmExecutionDone,result);
+                            listener.onCommand(Consts.algorithmExecutionDone,result, false);
                         }
                     }).start();
                 }
