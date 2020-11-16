@@ -4,7 +4,6 @@ import hkube.algo.wrapper.DataAdapter;
 import hkube.api.IHKubeAPI;
 import hkube.api.INode;
 
-import hkube.utils.DevUtil;
 import hkube.utils.PrintUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -134,28 +133,38 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
 
 
     @Override
-    public void onCommand(String command, Map data) {
+    public void onCommand(String command, Map data, boolean isDebug) {
         String[] executionCommands = {"algorithmExecutionDone", "algorithmExecutionError"};
         String[] subPipeCommands = {"subPipelineDone",
                 "subPipelineError", "subPipelineStopped"};
-        logger.debug(new PrintUtil().getAsJsonStr(data));
+        logger.debug("got command" + command) ;
+        if (data != null) {
+            logger.debug(new PrintUtil().getAsJsonStr(data));
+        } else {
+            logger.debug("data null");
+        }
         if (Arrays.asList(executionCommands).contains(command)) {
             String executionId = (String) data.get("execId");
-            Map results = (Map) data.get("response");
-            Object res = dataAdapter.getData(results, null);
-            data.put("response", res);
+            if (!isDebug) {
+                Map results = (Map) data.get("response");
+                Object res = dataAdapter.getData(results, null);
+                data.put("response", res);
+            }
             executions.get(executionId).setResult(data);
         }
         if (Arrays.asList(subPipeCommands).contains(command)) {
             String executionId = (String) data.get("subPipelineId");
-            Map results = (Map) data.get("response");
-            Object res = "No results";
-            if (results != null) {
-                res = dataAdapter.getData(results, null);
+            //Support getting
+            if (!isDebug) {
+                Map results = (Map) data.get("response");
+                Object res = "No results";
+                if (results != null) {
+                    res = dataAdapter.getData(results, null);
+                }
+                data.put("response", res);
             }
-            data.put("response", res);
             executions.get(executionId).setResult(data);
-            logger.debug("subpipeline execution result" + data);
         }
+        logger.debug("Execution result" + data);
     }
 }

@@ -184,7 +184,8 @@ public class Wrapper implements ICommandSender {
             String command = (String) msgAsMap.get("command");
             Map data = (Map) msgAsMap.get("data");
             listeners.forEach(listener -> {
-                listener.onCommand(command, data);
+                logger.debug("got command " + command);
+                listener.onCommand(command, data, isDebugMode);
             });
             logger.info("got message from worker:" + command);
             CompletableFuture.supplyAsync(() -> {
