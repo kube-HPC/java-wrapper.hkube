@@ -4,6 +4,7 @@ import hkube.algo.wrapper.DataAdapter;
 import hkube.api.IHKubeAPI;
 import hkube.api.INode;
 
+import hkube.utils.PrintUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -46,7 +47,7 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
 
     @Override
     public Future<Map> startStoredPipeLineAsynch(String name, Map flowInput) {
-        return startStoredPipeLineAsynch(name,flowInput,true);
+        return startStoredPipeLineAsynch(name, flowInput, true);
     }
 
     @Override
@@ -72,7 +73,7 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
 
     @Override
     public Map startStoredPipeLine(String name, Map flowInput, boolean includeResult) {
-        APIExecutionFuture future = (APIExecutionFuture) startStoredPipeLineAsynch(name, flowInput,includeResult);
+        APIExecutionFuture future = (APIExecutionFuture) startStoredPipeLineAsynch(name, flowInput, includeResult);
         return returnWhenExecDone(future);
     }
 
@@ -132,25 +133,38 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
 
 
     @Override
-    public void onCommand(String command, Map data) {
+    public void onCommand(String command, Map data, boolean isDebug) {
         String[] executionCommands = {"algorithmExecutionDone", "algorithmExecutionError"};
         String[] subPipeCommands = {"subPipelineDone",
                 "subPipelineError", "subPipelineStopped"};
+        logger.debug("got command" + command) ;
+        if (data != null) {
+            logger.debug(new PrintUtil().getAsJsonStr(data));
+        } else {
+            logger.debug("data null");
+        }
         if (Arrays.asList(executionCommands).contains(command)) {
             String executionId = (String) data.get("execId");
-            Map results = (Map) data.get("response");
-            Object res = dataAdapter.getData(results, null);
-            data.put("response", res);
+            if (!isDebug) {
+                Map results = (Map) data.get("response");
+                Object res = dataAdapter.getData(results, null);
+                data.put("response", res);
+            }
             executions.get(executionId).setResult(data);
-            logger.debug("algorithm execution result" + data);
         }
         if (Arrays.asList(subPipeCommands).contains(command)) {
             String executionId = (String) data.get("subPipelineId");
-            Map results = (Map) data.get("response");
-            Object res = dataAdapter.getData(results, null);
-            data.put("response", res);
+            //Support getting
+            if (!isDebug) {
+                Map results = (Map) data.get("response");
+                Object res = "No results";
+                if (results != null) {
+                    res = dataAdapter.getData(results, null);
+                }
+                data.put("response", res);
+            }
             executions.get(executionId).setResult(data);
-            logger.debug("subpipeline execution result" + data);
         }
+        logger.debug("Execution result" + data);
     }
 }

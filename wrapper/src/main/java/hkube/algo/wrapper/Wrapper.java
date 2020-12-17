@@ -5,6 +5,8 @@ import hkube.algo.HKubeAPIImpl;
 import hkube.algo.ICommandSender;
 import hkube.caching.Cache;
 import hkube.communication.DataServer;
+import hkube.communication.IRequestListener;
+import hkube.communication.IRequestServer;
 import hkube.communication.zmq.ZMQServer;
 import hkube.encoding.EncodingManager;
 import hkube.model.HeaderContentPair;
@@ -31,7 +33,7 @@ public class Wrapper implements ICommandSender {
 
     List<CommandResponseListener> listeners = new ArrayList<>();
     HKubeAPIImpl hkubeAPI;
-    ZMQServer zmqServer;
+    IRequestServer zmqServer;
     DataServer dataServer;
     TaskStorage taskResultStorage;
     DataAdapter dataAdapter;
@@ -44,7 +46,11 @@ public class Wrapper implements ICommandSender {
         mConfig = config;
         dataAdapter = new DataAdapter(mConfig);
         hkubeAPI = new HKubeAPIImpl(this, dataAdapter);
-        zmqServer = new ZMQServer(mConfig.commConfig);
+        if (!isDebugMode) {
+            zmqServer = new ZMQServer(mConfig.commConfig);
+        } else {
+            zmqServer = createMockZMQServer();
+        }
         dataServer = new DataServer(zmqServer, mConfig.commConfig);
         mAlgorithm = algorithm;
         taskResultStorage = new StorageFactory(config.storageConfig).getTaskStorage();
@@ -53,7 +59,7 @@ public class Wrapper implements ICommandSender {
     }
 
     public static void setDebugMode() {
-        isDebugMode=true;
+        isDebugMode = true;
     }
 
     public void addResponseListener(CommandResponseListener listener) {
@@ -66,9 +72,8 @@ public class Wrapper implements ICommandSender {
         uriString = mConfig.getUrl();
         if (uriString == null) {
             uriString = "ws://" + mConfig.getHost() + ":" + mConfig.getPort() + "/?storage=" + mConfig.getStorageVersion() + "&encoding=" + mConfig.getEncodingType();
-        }
-        else {
-            uriString = uriString+"?encoding="+ mConfig.getEncodingType();
+        } else {
+            uriString = uriString + "?encoding=" + mConfig.getEncodingType();
         }
         try {
             logger.info("connecting to uri: " + uriString);
@@ -177,9 +182,10 @@ public class Wrapper implements ICommandSender {
     private void onMessage(Map msgAsMap) {
         try {
             String command = (String) msgAsMap.get("command");
-            Map data = (Map)msgAsMap.get("data");
+            Map data = (Map) msgAsMap.get("data");
             listeners.forEach(listener -> {
-                listener.onCommand(command, data);
+                logger.debug("got command " + command);
+                listener.onCommand(command, data, isDebugMode);
             });
             logger.info("got message from worker:" + command);
             CompletableFuture.supplyAsync(() -> {
@@ -201,38 +207,38 @@ public class Wrapper implements ICommandSender {
                             try {
                                 logger.debug("Before fetching input data");
                                 input = dataAdapter.placeData(mArgs);
-                                mArgs.put("input",input);
+                                mArgs.put("input", input);
                                 logger.debug("After fetching input data");
                                 if (logger.isDebugEnabled()) {
                                     logger.debug("input data after decoding " + input);
                                 }
                                 logger.debug("Before running algorithm");
                                 Object res;
-                                res = mAlgorithm.Start( mArgs, hkubeAPI);
+                                res = mAlgorithm.Start(mArgs, hkubeAPI);
                                 logger.debug("After running algorithm");
                                 String taskId = (String) mArgs.get("taskId");
                                 String jobId = (String) mArgs.get("jobId");
 
-                                Collection savePaths =(Collection) ((Map)mArgs.get("info")).get("savePaths");
+                                Collection savePaths = (Collection) ((Map) mArgs.get("info")).get("savePaths");
                                 Map metaData = dataAdapter.getMetadata(savePaths, res);
                                 HeaderContentPair encodedData = dataAdapter.encode(res, mConfig.commConfig.getEncodingType());
                                 boolean dataAdded = dataServer.addTaskData(taskId, encodedData);
                                 int resEncodedSize = encodedData.getContent().length;
                                 Map resultStoringInfo = dataAdapter.getStoringInfo(mConfig, jobId, taskId, metaData, resEncodedSize);
-                                if(logger.isDebugEnabled()){
+                                if (logger.isDebugEnabled()) {
                                     logger.debug("result storing data" + resultStoringInfo);
                                 }
-                                if(!isDebugMode) {
-                                    if(dataAdded) {
+                                if (!isDebugMode) {
+                                    if (dataAdded) {
                                         sendMessage("storing", resultStoringInfo, false);
                                         taskResultStorage.put((String) mArgs.get("jobId"), taskId, encodedData);
-                                    }else{
+                                    } else {
                                         taskResultStorage.put((String) mArgs.get("jobId"), taskId, encodedData);
                                         sendMessage("storing", resultStoringInfo, false);
                                     }
                                     sendMessage("done", new HashMap(), false);
-                                }else{
-                                    sendMessage("done",res,false);
+                                } else {
+                                    sendMessage("done", res, false);
                                 }
                             } catch (Exception ex) {
                                 logger.error("unexpected exception", ex);
@@ -276,4 +282,24 @@ public class Wrapper implements ICommandSender {
     private void onExit() {
         logger.warn("exiting");
     }
+
+    private IRequestServer createMockZMQServer() {
+        return new IRequestServer() {
+            @Override
+            public void addRequestsListener(IRequestListener listener) {
+
+            }
+
+            @Override
+            public void reply(List<HeaderContentPair> replies) {
+
+            }
+
+            @Override
+            public void close() {
+
+            }
+        };
+    }
+
 }
