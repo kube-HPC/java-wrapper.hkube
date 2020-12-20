@@ -5,3 +5,4 @@ target/
 /wrapper.jar
 /original-encapsulated-algorithm.pom
 /original-encapsulated-algorithm.jar
+/algorithm-example/encapsulated-algorithm/

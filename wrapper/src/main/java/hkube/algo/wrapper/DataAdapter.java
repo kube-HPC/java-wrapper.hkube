@@ -2,6 +2,8 @@ package hkube.algo.wrapper;
 
 
 import hkube.communication.BatchRequest;
+import hkube.communication.IRequest;
+import hkube.communication.IRequestFactory;
 import hkube.communication.SingleRequest;
 
 import hkube.encoding.EncodingManager;
@@ -22,12 +24,14 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 public class DataAdapter {
+    private final IRequestFactory requestFactory;
     WrapperConfig config;
     TaskStorage taskStorage;
     StorageProxy storageProxy;
     private static final Logger logger = LogManager.getLogger();
 
-    public DataAdapter(WrapperConfig config) {
+    public DataAdapter(WrapperConfig config, IRequestFactory requestFactory) {
+        this.requestFactory = requestFactory;
         this.config = config;
         taskStorage = new StorageFactory(config.storageConfig).getTaskStorage();
         storageProxy = new StorageProxy(taskStorage);
@@ -115,7 +119,7 @@ public class DataAdapter {
             Map discovery = (Map) single.get("discovery");
             String host = (String) discovery.get("host");
             String port = (String) discovery.get("port");
-            ZMQRequest zmqr = new ZMQRequest(host, port, config.commConfig);
+            IRequest zmqr = this.requestFactory.getRequest(host, port, config.commConfig);
             SingleRequest singleRequest = null;
             BatchRequest batchRequest = null;
             if (single.get("tasks") != null) {
@@ -128,32 +132,40 @@ public class DataAdapter {
             }
             try {
                 if (singleRequest != null) {
-                    ObjectAndSize objectAndSize = (ObjectAndSize) singleRequest.send();
                     Map storageInfo;
-                    value = objectAndSize.getValue();
-                    if (single.get("storageInfo") != null) {
-                        storageInfo = (Map) single.get("storageInfo");
-                        logger.info("Getting single task result from storage");
-                        storageProxy.setToCache(storageInfo, value, objectAndSize.getSize());
+                    storageInfo = (Map) single.get("storageInfo");
+                    if (storageProxy.existsInCache(storageInfo)) {
+                        value = storageProxy.getInputParamFromStorage(storageInfo, path);
+                    } else {
+                        ObjectAndSize objectAndSize = (ObjectAndSize) singleRequest.send();
+                        value = objectAndSize.getValue();
+                        if (single.get("storageInfo") != null) {
+                            logger.info("Getting single task result from storage");
+                            storageProxy.setToCache(storageInfo, value, objectAndSize.getSize());
+                        }
+                        value = storageProxy.getSpecificData(value, path);
                     }
-                    value = storageProxy.getSpecificData(value, path);
                 } else {
-                    Map<String, ObjectAndSize> batchResult = batchRequest.send();
-                    List resultValues = batchResult.entrySet().stream().map(result -> {
-                        String taskId = result.getKey();
-                        Object currentValue = result.getValue().getValue();
-                        storageProxy.setToCache(taskId, jobId, currentValue, result.getValue().getSize());
-                        if (path != null && !path.equals(""))
-                            return storageProxy.getSpecificData(currentValue, path);
-                        else
-                            return currentValue;
-                    }).collect(Collectors.toList());
+                    if (storageProxy.allExistInCache(jobId, tasks)) {
+                        value = tasks.stream().map((taskId) -> storageProxy.getInputParamFromStorage(jobId, taskId, path)).collect(Collectors.toList());
+                    } else {
+                        Map<String, ObjectAndSize> batchResult = batchRequest.send();
+                        List resultValues = batchResult.entrySet().stream().map(result -> {
+                            String taskId = result.getKey();
+                            Object currentValue = result.getValue().getValue();
+                            storageProxy.setToCache(taskId, jobId, currentValue, result.getValue().getSize());
+                            if (path != null && !path.equals(""))
+                                return storageProxy.getSpecificData(currentValue, path);
+                            else
+                                return currentValue;
+                        }).collect(Collectors.toList());
 
 
-                    List<String> missingTasks = tasks.stream().filter(taskId -> !batchResult.containsKey(taskId)).collect(Collectors.toList());
-                    logger.info("Got " + (tasks.size() - missingTasks.size()) + "valid task results from batch request");
-                    value = missingTasks.stream().map((taskId) -> storageProxy.getInputParamFromStorage(jobId, taskId, path)).collect(Collectors.toList());
-                    ((Collection) value).addAll(resultValues);
+                        List<String> missingTasks = tasks.stream().filter(taskId -> !batchResult.containsKey(taskId)).collect(Collectors.toList());
+                        logger.info("Got " + (tasks.size() - missingTasks.size()) + "valid task results from batch request");
+                        value = missingTasks.stream().map((taskId) -> storageProxy.getInputParamFromStorage(jobId, taskId, path)).collect(Collectors.toList());
+                        ((Collection) value).addAll(resultValues);
+                    }
                 }
             } catch (TimeoutException e) {
                 logger.warn("Timeout trying to get output from " + host + ":" + port);

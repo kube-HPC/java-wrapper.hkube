@@ -7,6 +7,7 @@ import hkube.caching.Cache;
 import hkube.communication.DataServer;
 import hkube.communication.IRequestListener;
 import hkube.communication.IRequestServer;
+import hkube.communication.zmq.RequestFactory;
 import hkube.communication.zmq.ZMQServer;
 import hkube.encoding.EncodingManager;
 import hkube.model.HeaderContentPair;
@@ -44,7 +45,7 @@ public class Wrapper implements ICommandSender {
     public Wrapper(IAlgorithm algorithm, WrapperConfig config) {
         Cache.init(config.commConfig.getMaxCacheSize());
         mConfig = config;
-        dataAdapter = new DataAdapter(mConfig);
+        dataAdapter = new DataAdapter(mConfig,new RequestFactory());
         hkubeAPI = new HKubeAPIImpl(this, dataAdapter);
         if (!isDebugMode) {
             zmqServer = new ZMQServer(mConfig.commConfig);
