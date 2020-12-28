@@ -45,9 +45,9 @@ public class InputOutput implements IAlgorithm {
 //            byte[] myBytes = new byte[numberOfbytes];
 //            output.put("addedBytes", myBytes);
 //        }
-       Object arr = input.iterator().next();
 //        System.out.print("Output size " + arr.length);
-        return arr;
+
+        return input;
 
     }
 
