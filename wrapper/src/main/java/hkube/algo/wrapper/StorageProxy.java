@@ -23,6 +23,24 @@ public class StorageProxy {
         if (result == null) {
             ObjectAndSize objectAndSize = storage.getByFullPath(path);
             result = objectAndSize.getValue();
+            if (path.endsWith("result.json")) {
+                ((List) result).forEach(resultPartReference -> {
+                            Map info = (Map) ((Map) resultPartReference).get("info");
+                            if (info != null) {
+                                String message = (String) (info).get("message");
+                                if (message != null && message.contains("too large")) {
+                                    String partPath = (String) ((Map) info).get("path");
+                                    try {
+                                        ObjectAndSize resultPart = storage.getByFullPath(partPath);
+                                        ((Map)resultPartReference).put("result", resultPart.getValue());
+                                    } catch (FileNotFoundException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }
+                        }
+                );
+            }
             decodedCache.put(path, objectAndSize.getValue(), objectAndSize.getSize());
         }
         return result;
