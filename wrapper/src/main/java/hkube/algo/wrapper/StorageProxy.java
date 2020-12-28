@@ -8,10 +8,7 @@ import org.apache.commons.jxpath.JXPathContext;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.FileNotFoundException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.StringTokenizer;
+import java.util.*;
 
 public class StorageProxy {
     DecodedCache decodedCache = new DecodedCache();
@@ -26,7 +23,25 @@ public class StorageProxy {
         if (result == null) {
             ObjectAndSize objectAndSize = storage.getByFullPath(path);
             result = objectAndSize.getValue();
-            decodedCache.put(path, objectAndSize.getValue(),objectAndSize.getSize());
+            if (path.endsWith("result.json")) {
+                ((List) result).forEach(resultPartReference -> {
+                            Map info = (Map) ((Map) resultPartReference).get("info");
+                            if (info != null) {
+                                String message = (String) (info).get("message");
+                                if (message != null && message.contains("too large")) {
+                                    String partPath = (String) ((Map) info).get("path");
+                                    try {
+                                        ObjectAndSize resultPart = storage.getByFullPath(partPath);
+                                        ((Map)resultPartReference).put("result", resultPart.getValue());
+                                    } catch (FileNotFoundException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }
+                        }
+                );
+            }
+            decodedCache.put(path, objectAndSize.getValue(), objectAndSize.getSize());
         }
         return result;
     }
@@ -35,21 +50,24 @@ public class StorageProxy {
         String path = storage.createPath(jobId, taskId);
         Object result = decodedCache.get(path);
         if (result == null) {
-            ObjectAndSize objectAndSize  = storage.get(jobId, taskId);
-            decodedCache.put(path, objectAndSize.getValue(),objectAndSize.getSize());
+            ObjectAndSize objectAndSize = storage.get(jobId, taskId);
+            decodedCache.put(path, objectAndSize.getValue(), objectAndSize.getSize());
         }
         return result;
     }
-    public void setToCache (String jobId, String taskId,Object value, Integer size) {
+
+    public void setToCache(String jobId, String taskId, Object value, Integer size) {
         String path = storage.createPath(jobId, taskId);
-        setToCache(path,value,size);
+        setToCache(path, value, size);
     }
-    public void setToCache(String path,Object value,Integer size){
-        decodedCache.put(path,value,size);
+
+    public void setToCache(String path, Object value, Integer size) {
+        decodedCache.put(path, value, size);
     }
-    public void setToCache(Map storageInfo,Object value,Integer size){
+
+    public void setToCache(Map storageInfo, Object value, Integer size) {
         String storageFullPath = (String) storageInfo.get("path");
-        setToCache(storageFullPath,value,size);
+        setToCache(storageFullPath, value, size);
     }
 
     public Object getInputParamFromStorage(Map storageInfo, String path) {
@@ -85,15 +103,15 @@ public class StorageProxy {
             while (tokenizer.hasMoreElements()) {
                 String nextToken = tokenizer.nextToken();
                 if (StringUtils.isNumeric(nextToken)) {
-                    nextToken = "[" + (Integer.valueOf(nextToken)+1) + "]";
+                    nextToken = "[" + (Integer.valueOf(nextToken) + 1) + "]";
                     relativePath = relativePath + nextToken;
                 } else {
                     relativePath = relativePath + "/" + nextToken;
                 }
             }
-            if ((storedData instanceof Map|| storedData instanceof Collection) && relativePath.length() > 0) {
-                if (relativePath.startsWith("[")){
-                    relativePath="."+relativePath;
+            if ((storedData instanceof Map || storedData instanceof Collection) && relativePath.length() > 0) {
+                if (relativePath.startsWith("[")) {
+                    relativePath = "." + relativePath;
                 }
                 value = JXPathContext.newContext(storedData).getValue(relativePath);
             } else {
