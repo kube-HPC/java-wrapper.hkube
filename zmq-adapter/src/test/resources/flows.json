@@ -21,9 +21,8 @@
   ],
   "master": [
     {
-      "source": "B",
+      "source": "A",
       "next": [
-        "A",
         "C"
       ]
     },

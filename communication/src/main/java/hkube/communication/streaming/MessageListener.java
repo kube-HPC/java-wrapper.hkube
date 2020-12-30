@@ -1,0 +1,50 @@
+package hkube.communication.streaming;
+
+import hkube.algo.ICommandSender;
+import hkube.communication.ICommConfig;
+import hkube.encoding.EncodingManager;
+import hkube.model.Header;
+
+import java.util.*;
+
+public class MessageListener {
+    String messageOriginNodeName;
+    EncodingManager encodingManager;
+    IListener listenerAdapter;
+    List<IMessageListener> messageListeners= new ArrayList<>();
+
+
+    public MessageListener(ICommConfig config, IListener listenerAdapter, String messageOriginNodeName) {
+        this.messageOriginNodeName = messageOriginNodeName;
+        encodingManager = new EncodingManager(config.getEncodingType());
+        this.listenerAdapter = listenerAdapter;
+        this.listenerAdapter.setMessageHandler(new MessageHandler());
+    }
+    public void register(IMessageListener listener){
+        messageListeners.add(listener);
+    }
+
+    class MessageHandler implements IMessageHandler {
+
+
+        @Override
+        public byte[] onMessage(Message message) {
+            long start = new Date().getTime();
+            Object decoded = encodingManager.decodeSeparately(new Header(message.getHeader()), message.getData());
+            messageListeners.stream().forEach(
+                    listener -> {
+                        listener.onMessage(decoded, messageOriginNodeName);
+                    }
+            );
+            long end = new Date().getTime();
+            Map result = new HashMap();
+            result.put("duration", (double) (end - start));
+            return encodingManager.encodeNoHeader(result);
+        }
+    }
+
+    public void start() {
+        listenerAdapter.start();
+
+    }
+}

@@ -8,10 +8,8 @@ package hkube.communication.streaming.zmq;
 
 import java.util.*;
 
-import hkube.communication.streaming.Flow;
-import hkube.communication.streaming.IResponseAccumulator;
-import hkube.communication.streaming.Message;
-import hkube.communication.streaming.MessageQueue;
+import hkube.algo.ICommandSender;
+import hkube.communication.streaming.*;
 import hkube.encoding.EncodingManager;
 import org.zeromq.ZContext;
 import org.zeromq.ZFrame;
@@ -19,7 +17,7 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMsg;
 
-public class Producer {
+public class Producer implements IProducer {
 
     private static final int HEARTBEAT_LIVENESS = 3; // 3-5 is reasonable
     private static final int HEARTBEAT_INTERVAL = 1000; // msecs
@@ -27,20 +25,22 @@ public class Producer {
     private static final byte[] PPP_READY = {1}; // Signals worker is ready
     private static final byte[] PPP_HEARTBEAT = {2}; // Signals worker
     private String port = null;
-    private IResponseAccumulator responseAccumulator;
+    private List<IResponseAccumulator> responseAccumulators = new ArrayList<>();
     private MessageQueue queue;
     private EncodingManager encodingManager;
     private List<String> consumers;
     String name;
+    public double maxBufferSize;
+    ICommandSender errorHandler;
 
-    public Producer(String name, String port, IResponseAccumulator responseAccumulator, List<String> consumers, String encoding) {
+    public Producer(String name, String port, List<String> consumers, String encoding, double maxBufferSize, ICommandSender errorHandler) {
         this.port = port;
-        this.responseAccumulator = responseAccumulator;
         this.name = name;
-        queue = new MessageQueue(name, consumers);
+        this.errorHandler = errorHandler;
+        queue = new MessageQueue(name, consumers, maxBufferSize);
         encodingManager = new EncodingManager(encoding);
         this.consumers = consumers;
-
+        this.maxBufferSize = maxBufferSize;
     }
     // heartbeat
 
@@ -70,6 +70,10 @@ public class Producer {
             return Arrays.equals(address.getData(), other.address.getData());
         }
 
+    }
+
+    public void registerResponseAccumulator(IResponseAccumulator accumulator) {
+        responseAccumulators.add(accumulator);
     }
 
     private static class WorkersPool {
@@ -106,7 +110,10 @@ public class Producer {
          */
         public synchronized ZFrame next(String consumerName) {
             Deque<Worker> workers = queues.get(consumerName);
-            return workers.pollFirst().address;
+            if (workers != null && workers.size() > 0) {
+                return workers.pollFirst().address;
+            }
+            return null;
         }
 
         /**
@@ -147,68 +154,103 @@ public class Producer {
             });
         }
     }
-    public void produce(Message msg){
+
+    public void produce(Message msg) {
         queue.push(msg);
     }
 
     public void start() {
         // Prepare our context and sockets
-        ZContext context = new ZContext();
-        ZMQ.Socket backend = context.createSocket(ZMQ.ROUTER);
-        backend.bind("tcp://*:" + port); // For workers
-        WorkersPool workers = new WorkersPool(this.consumers);
-        Thread thread = new Thread( new Runnable() {
+
+        Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
-                while (!Thread.currentThread().isInterrupted()) {
-                    ZMQ.Poller items = new ZMQ.Poller(consumers.size());
-                    items.register(backend, ZMQ.Poller.POLLIN);
-                    items.poll();
-                    if (items.pollin(0)) {
-                        // receive whole message (all ZFrames) at once
-                        ZMsg msg = ZMsg.recvMsg(backend);
-                        if (msg == null)
-                            break; // Interrupted
+                try {
+                    ZContext context = new ZContext();
+                    ZMQ.Socket backend = context.createSocket(ZMQ.ROUTER);
+                    backend.bind("tcp://*:" + port); // For workers
+                    WorkersPool workers = new WorkersPool(consumers);
+                    while (!Thread.currentThread().isInterrupted()) {
+                        ZMQ.Poller items = new ZMQ.Poller(consumers.size());
+                        items.register(backend, ZMQ.Poller.POLLIN);
+                        items.poll(HEARTBEAT_INTERVAL);
+                        if (items.pollin(0)) {
+                            // receive whole message (all ZFrames) at once
+                            ZMsg msg = ZMsg.recvMsg(backend);
+                            if (msg == null)
+                                break; // Interrupted
 
-                        // Any sign of life from worker means it's ready
-                        ZFrame address = msg.unwrap();
+                            // Any sign of life from worker means it's ready
+                            ZFrame address = msg.unwrap();
 
 
-                        // Validate control message, or return reply to client
+                            // Validate control message, or return reply to client
 
-                        ZFrame frame = msg.unwrap();
-                        ZFrame consumerNameFrame = msg.unwrap();
-                        String consumerName = (String) encodingManager.decodeNoHeader(consumerNameFrame.getData());
-                        workers.workerReady(new Worker(address), consumerName);
-                        byte[] data = frame.getData();
-                        if (!(Arrays.equals(data, PPP_HEARTBEAT) || Arrays
-                                .equals(frame.getData(), PPP_READY))) {
-                            responseAccumulator.onResponse(data, consumerName);
+                            ZFrame frame = msg.pop();
+                            ZFrame consumerNameFrame = msg.pop();
+                            String consumerName = (String) encodingManager.decodeNoHeader(consumerNameFrame.getData());
+                            workers.workerReady(new Worker(address), consumerName);
+                            byte[] data = frame.getData();
+                            if (!(Arrays.equals(data, PPP_HEARTBEAT) || Arrays
+                                    .equals(frame.getData(), PPP_READY))) {
+                                responseAccumulators.stream().forEach(responseAccumlator -> {
+                                    responseAccumlator.onResponse(data, consumerName);
+                                });
+
+                            }
+                            msg.destroy();
+                            workers.sendHeartbeats(backend);
+                            workers.purge();
                         }
-                        msg.destroy();
-                        workers.sendHeartbeats(backend);
-                        workers.purge();
+                        consumers.stream().forEach(consumerName -> {
+                            ZFrame frame = workers.next(consumerName);
+                            if (frame != null) {
+                                Message message = queue.pop(consumerName);
+                                if (message != null) {
+                                    frame.sendAndDestroy(backend, ZMQ.SNDMORE);
+                                    Flow flow = message.getFlow().getRestOfFlow(consumerName);
+                                    byte[] bytes = encodingManager.encodeNoHeader(flow);
+                                    frame = new ZFrame(bytes);
+                                    frame.sendAndDestroy(backend, ZMQ.SNDMORE);
+                                    bytes = message.getHeader();
+                                    frame = new ZFrame(bytes);
+                                    frame.sendAndDestroy(backend, ZMQ.SNDMORE);
+                                    bytes = message.getData();
+                                    frame = new ZFrame(bytes);
+                                    frame.sendAndDestroy(backend, 0);
+                                }
+                            }
+                        });
                     }
-                    consumers.stream().forEach(consumerName -> {
-                        ZFrame frame = workers.next(consumerName);
-                        frame.sendAndDestroy(backend, ZMQ.SNDMORE);
-                        Message message = queue.pop(consumerName);
-                        Flow flow = message.getFlow().getRestOfFlow(consumerName);
-                        byte[] bytes = encodingManager.encodeNoHeader(flow);
-                        frame = new ZFrame(bytes);
-                        frame.sendAndDestroy(backend, ZMQ.SNDMORE);
-                        bytes = message.getHeader();
-                        frame = new ZFrame(bytes);
-                        frame.sendAndDestroy(backend, ZMQ.SNDMORE);
-                        bytes = message.getData();
-                        frame = new ZFrame(bytes);
-                        frame.sendAndDestroy(backend);
-                    });
+                    workers.close();
+                    context.destroy();
+                } catch (Exception exc) {
+                    exc.printStackTrace(System.out);
+                    Map<String, String> res = new HashMap<>();
+                    res.put("code", "Failed");
+                    res.put("message", exc.toString());
+                   errorHandler.sendMessage("errorMessage", res, true);
+
                 }
             }
-        },name + " producer");
+        }, name + " producer");
         thread.start();
-        workers.close();
-        context.destroy();
+
     }
+
+    @Override
+    public int getQueueSize(String consumer) {
+        return queue.getInQueue(consumer);
+    }
+
+    @Override
+    public int getSent(String consumer) {
+        return queue.getSent(consumer);
+    }
+
+    @Override
+    public int getDropped(String consumer) {
+        return queue.getDropped(consumer);
+    }
+
 }

@@ -12,6 +12,27 @@ public class CommConfig extends Config implements ICommConfig {
     public String getListeningPort(){
         return getStrEnvValue("DISCOVERY_PORT","9020");
     }
+
+    @Override
+    public Integer getStreamMaxBufferSize() {
+        return 2;
+    }
+
+    @Override
+    public String getStreamListeningPort() {
+        return "4004";
+    }
+
+    @Override
+    public Integer getstreamstatisticsinterval() {
+        return 2;
+    }
+
+    @Override
+    public Boolean isStateful() {
+        return true;
+    }
+
     @Override
     public Integer getTimeout(){
         return getNumericEnvValue("DISCOVERY_TIMEOUT",1000);

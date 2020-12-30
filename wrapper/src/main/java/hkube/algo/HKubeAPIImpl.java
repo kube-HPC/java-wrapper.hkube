@@ -160,6 +160,7 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
                 Object res = "No results";
                 if (results != null) {
                     res = dataAdapter.getData(results, null);
+
                 }
                 data.put("response", res);
             }

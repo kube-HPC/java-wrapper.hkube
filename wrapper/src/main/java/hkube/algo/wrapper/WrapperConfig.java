@@ -22,13 +22,13 @@ public class WrapperConfig extends Config {
     public String getEncodingType() {
         return getStrEnvValue("WORKER_ALGORITHM_ENCODING", "bson");
     }
+
     public String getUrl() {
-            try{
-                return getStrEnvValue("WORKER_SOCKET_URL", null);
-            }
-            catch (Throwable e){
-                return null;
-            }
+        try {
+            return getStrEnvValue("WORKER_SOCKET_URL", null);
+        } catch (Throwable e) {
+            return null;
+        }
     }
 
 
@@ -45,6 +45,22 @@ public class WrapperConfig extends Config {
             return getStrEnvValue("DISCOVERY_PORT", "9020");
         }
 
+        public Integer getStreamMaxBufferSize() {
+            return getNumericEnvValue("STREAMING_MAX_BUFFER_MB", 1500);
+        }
+
+        public String getStreamListeningPort() {
+            return getStrEnvValue("STREAMING_DISCOVERY_PORT", "9022");
+        }
+
+        public Integer getstreamstatisticsinterval() {
+            return getNumericEnvValue("STREAMING_STATISTICS_INTERVAL", 2);
+        }
+
+        public Boolean isStateful() {
+            return getStrEnvValue("STREAMING_STATEFUL", "True").equals("True");
+        }
+
         public String getListeningHost() {
             return getStrEnvValue("POD_IP", "127.0.0.1");
         }
@@ -57,6 +73,7 @@ public class WrapperConfig extends Config {
 
             return getNumericEnvValue("DISCOVERY_TIMEOUT", 20000);
         }
+
         public Integer getNetworkTimeout() {
 
             return getNumericEnvValue("DISCOVERY_NETWORK_TIMEOUT", 1000);
@@ -109,7 +126,7 @@ public class WrapperConfig extends Config {
 
         @Override
         public String getS3EndPoint() {
-            return getStrEnvValue("S3_ENDPOINT_URL","http://127.0.0.1:9000");
+            return getStrEnvValue("S3_ENDPOINT_URL", "http://127.0.0.1:9000");
         }
 
     }

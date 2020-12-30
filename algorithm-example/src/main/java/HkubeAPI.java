@@ -3,6 +3,12 @@ import hkube.api.IHKubeAPI;
 import hkube.api.INode;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,11 +33,31 @@ public class HkubeAPI implements IAlgorithm {
         Map files = new HashMap();
         files.put("link", "thislink");
         files.put("other", "otherValue");
-        simpleInput.put("subpipe", files);
         simpleInput.put("arraySize", 100);
         simpleInput.put("bufferSize", 1500);
 
+
+
         Map stroedResult = hkubeAPI.startStoredPipeLine("sized_result", simpleInput);
+
+        final String nodeName = "node1";
+        final String apiServerDownloadUrl = "http://63.34.172.241/hkube/api-server/api/v1/storage/download/custom/";
+        String path = (String) ((Map) ((Map) ((ArrayList) stroedResult.get("response")).stream().filter(map -> ((Map) map).get("nodeName").equals(nodeName)).findFirst().get()).get("info")).get("path");
+        String encodedrul = URLEncoder.encode(path, "UTF-8");
+        encodedrul = apiServerDownloadUrl + encodedrul;
+        URL url = new URL(encodedrul);
+        InputStream is = url.openConnection().getInputStream();
+        byte[] bytes = new byte[4096];
+        BufferedReader br = new BufferedReader(new InputStreamReader(is));
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        is.read(new byte[6]);
+        int nRead;
+        while ((nRead = is.read(bytes, 0, bytes.length)) != -1) {
+            buffer.write(bytes, 0, nRead);
+        }
+        byte[] outputAsBytes = buffer.toByteArray();
+        String str = new String(outputAsBytes);
+
 
 //
 //        INode node = new INode() {
