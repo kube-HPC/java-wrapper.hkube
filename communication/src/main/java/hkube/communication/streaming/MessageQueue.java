@@ -19,6 +19,10 @@ public class MessageQueue {
         int sent = 0;
     }
 
+    public boolean anyLeft() {
+        return queue.size() > 0;
+    }
+
     public MessageQueue(String name, List<String> consumers, Double maxSize) {
         sourceName = name;
         this.maxSize = maxSize;
@@ -29,11 +33,13 @@ public class MessageQueue {
 
     public void push(Message message) {
         memorySize += message.data.length;
-        while(maxSize<memorySize){
+        while (maxSize < memorySize) {
             looseMessage();
         }
-        consumersMap.values().stream().forEach(stats -> {
-            stats.added += 1;
+        consumersMap.keySet().stream().forEach(consumer -> {
+            if (message.getFlow().isNextInFlow(sourceName, consumer)) {
+                consumersMap.get(consumer).added += 1;
+            }
         });
         queue.add(message);
     }
@@ -41,11 +47,13 @@ public class MessageQueue {
     private void looseMessage() {
         Message msg = queue.remove(0);
         memorySize -= msg.data.length;
-        consumersMap.values().stream().forEach(currentStats -> {
-            if (currentStats.index == 0) {
-                currentStats.dropped++;
-            }else {
-                currentStats.index--;
+        consumersMap.entrySet().stream().forEach(currentStats -> {
+            if (currentStats.getValue().index == 0) {
+                if (msg.getFlow().isNextInFlow(sourceName, currentStats.getKey())) {
+                    currentStats.getValue().dropped++;
+                }
+            } else {
+                currentStats.getValue().index--;
             }
         });
 
@@ -57,12 +65,8 @@ public class MessageQueue {
         if (nextIndex >= 0) {
             Message msg = queue.get(nextIndex);
             stats.index = nextIndex + 1;
-            if (!consumersMap.values().stream().anyMatch(currentStats -> currentStats.index == 0)) {
-                queue.remove(0);
-                memorySize -= msg.data.length;
-                consumersMap.values().stream().forEach(currentStats -> {
-                    currentStats.index--;
-                });
+            while(removeIfNeeded()){
+
             }
             stats.sent += 1;
             return msg;
@@ -70,6 +74,20 @@ public class MessageQueue {
         return null;
     }
 
+    public boolean removeIfNeeded() {
+        if (queue.size() > 0) {
+            final Message msg = queue.get(0);
+            if (!consumersMap.entrySet().stream().filter(currentStats -> currentStats.getValue().index == 0).anyMatch(consumerStats -> msg.getFlow().isNextInFlow(sourceName,consumerStats.getKey()))){
+                queue.remove(0);
+                memorySize -= msg.data.length;
+                consumersMap.values().stream().forEach(currentStats -> {
+                    currentStats.index--;
+                });
+                return true;
+            }
+        }
+        return false;
+    }
 
     private int nextMessageIndex(String consumer) {
         int i = consumersMap.get(consumer).index;
@@ -84,12 +102,16 @@ public class MessageQueue {
 
     public int getInQueue(String consumer) {
         ConsumerStats stats = consumersMap.get(consumer);
-        return stats.added-stats.sent;
+        return stats.added - stats.sent;
+    }
+    public int getInQueue() {
+        return queue.size();
     }
     public int getSent(String consumer) {
         ConsumerStats stats = consumersMap.get(consumer);
         return stats.sent;
     }
+
     public int getDropped(String consumer) {
         ConsumerStats stats = consumersMap.get(consumer);
         return stats.dropped;

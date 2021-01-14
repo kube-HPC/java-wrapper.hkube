@@ -25,7 +25,7 @@ public class CommConfig extends Config implements ICommConfig {
 
     @Override
     public Integer getstreamstatisticsinterval() {
-        return 2;
+        return 1;
     }
 
     @Override

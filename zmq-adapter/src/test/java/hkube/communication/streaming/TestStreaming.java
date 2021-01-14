@@ -34,23 +34,17 @@ public class TestStreaming {
         int[] messages = {0};
         List concumers = new ArrayList();
         concumers.add("B");
-        IResponseAccumulator accumulator = new IResponseAccumulator() {
-            @Override
-            public void onResponse(byte[] response, String origin) {
-                if(new String(response).equals("response"))
-                responses[0]++;
-            }
+        IResponseAccumulator accumulator = (response, origin, duration) -> {
+            if(new String(response).equals("response"))
+            responses[0]++;
         };
 
 
-        IMessageHandler messageHandler = new IMessageHandler() {
-            @Override
-            public byte[] onMessage(Message message) {
-                if (new String(message.data).equals("Hello") && new String(message.header).equals("Header"))
-                    messages[0]++;
-                return "response".getBytes();
+        IMessageHandler messageHandler = message -> {
+            if (new String(message.data).equals("Hello") && new String(message.header).equals("Header"))
+                messages[0]++;
+            return "response".getBytes();
 
-            }
         };
 
         Producer producer = new Producer("A", "4004",  concumers, "msgpack",10000, new ICommandSender() {
@@ -125,6 +119,8 @@ public class TestStreaming {
         }
         assert messages[0] == 2;
         assert responses[0] == 2;
+        producer.close(false);
+
     }
 
     public JSONObject parseJSON(String filename) throws JSONException, IOException, URISyntaxException {

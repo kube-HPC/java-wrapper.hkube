@@ -62,9 +62,13 @@ public class Flow {
     }
 
     private Node getNode(String name) {
+        if(nodes.stream().anyMatch(node ->
+                (node.source.equals(name))))
         return nodes.stream().filter(node ->
                 (node.source.equals(name))
         ).findFirst().get();
+        else
+            return null;
     }
 
     public Flow getRestOfFlow(String current) {

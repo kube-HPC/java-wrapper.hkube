@@ -12,13 +12,15 @@ import java.util.*;
 
 
 public class MessageProducer {
+
+
     List<String> consumers;
-    String port;
     Double maxMemorySize;
     EncodingManager encoding;
     int statisticsInterval;
-    IProducer producerAdapter;
-    Map responsesCache = new HashMap();
+    public IProducer producerAdapter;
+    Map durationCache = new HashMap();
+    Map<String, ArrayDeque<Long>> grossDurationCache = new HashMap();
     Map<String, Integer> responseCount = new HashMap();
     Boolean active = true;
     int printStatistics = 0;
@@ -29,16 +31,22 @@ public class MessageProducer {
         consumers = consumerNodes;
         this.producerAdapter = producerAdapter;
         maxMemorySize = config.getStreamMaxBufferSize() * 1024d * 1024;
-        statisticsInterval = config.getstreamstatisticsinterval()*1000;
+        statisticsInterval = config.getstreamstatisticsinterval() * 1000;
         encoding = new EncodingManager(config.getEncodingType());
         config.getstreamstatisticsinterval();
 
 
-        consumerNodes.stream().forEach(consumerNode -> {
-            responsesCache.put(consumerNode, new ArrayDeque());
+        consumerNodes.stream().forEach(consumerNode ->
+        {
+            durationCache.put(consumerNode, new ArrayDeque());
+            grossDurationCache.put(consumerNode, new ArrayDeque());
             responseCount.put(consumerNode, 0);
         });
         producerAdapter.registerResponseAccumulator(new ResponseAccumulator());
+    }
+
+    public List<String> getConsumers() {
+        return consumers;
     }
 
     void sendStatisticsEvery() {
@@ -71,19 +79,21 @@ public class MessageProducer {
     class ResponseAccumulator implements IResponseAccumulator {
 
         @Override
-        public void onResponse(byte[] response, String origin) {
+        public void onResponse(byte[] response, String origin, Long grossDuration) {
             Map decodedResponse = (Map) encoding.decodeNoHeader(response);
             responseCount.put(origin, responseCount.get(origin) + 1);
             Double duration = (Double) decodedResponse.get("duration");
-            ArrayDeque<Double> durations = (ArrayDeque<Double>) responsesCache.get(origin);
+            ArrayDeque<Double> durations = (ArrayDeque<Double>) durationCache.get(origin);
+            ArrayDeque<Long> grossDurations = grossDurationCache.get(origin);
             durations.add(duration);
+            grossDurations.add(grossDuration);
         }
     }
 
 
     ArrayDeque<Double> resetResponseCache(String consumerNode) {
-        ArrayDeque<Double> durations = (ArrayDeque<Double>) responsesCache.get(consumerNode);
-        responsesCache.put(consumerNode, new ArrayDeque<Float>());
+        ArrayDeque<Double> durations = (ArrayDeque<Double>) durationCache.get(consumerNode);
+        durationCache.put(consumerNode, new ArrayDeque<Float>());
         return durations;
     }
 
@@ -100,7 +110,7 @@ public class MessageProducer {
             ArrayDeque<Double> durations = resetResponseCache(consumer);
             int dropped = producerAdapter.getDropped(consumer);
             int responses = responseCount.get(consumer);
-            Statistics stats = new Statistics(consumer, sent, queueSize, durations,responses, dropped);
+            Statistics stats = new Statistics(consumer, sent, queueSize, durations, responses, dropped);
             statistics.add(stats);
 
         });
@@ -111,7 +121,7 @@ public class MessageProducer {
         if (printStatistics % 10 == 0) {
             {
                 Object json = new PrintUtil().toJSON(statistics);
-                System.out.print(json+"\n");
+                System.out.print(json + "\n");
             }
         }
     }
@@ -119,5 +129,8 @@ public class MessageProducer {
     public void start() {
         producerAdapter.start();
         sendStatisticsEvery();
+    }
+    public void close(boolean force) {
+        producerAdapter.close(force);
     }
 }

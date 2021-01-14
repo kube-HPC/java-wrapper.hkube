@@ -7,6 +7,8 @@ import hkube.caching.Cache;
 import hkube.communication.DataServer;
 import hkube.communication.IRequestListener;
 import hkube.communication.IRequestServer;
+import hkube.communication.streaming.IStatisticsListener;
+import hkube.communication.streaming.Statistics;
 import hkube.communication.zmq.RequestFactory;
 import hkube.communication.zmq.ZMQServer;
 import hkube.encoding.EncodingManager;
@@ -30,6 +32,8 @@ public class Wrapper implements ICommandSender {
     private static boolean isDebugMode = false;
     Session userSession = null;
     private IAlgorithm mAlgorithm;
+    private IAlgorithm originalAlg;
+    private IAlgorithm statelessAlg;
     Map mArgs;
 
     List<CommandResponseListener> listeners = new ArrayList<>();
@@ -39,21 +43,28 @@ public class Wrapper implements ICommandSender {
     TaskStorage taskResultStorage;
     DataAdapter dataAdapter;
     EncodingManager workerEncoder;
+    StreamingManager streamingManager;
+    String nodeName;
+    boolean stopping;
+
 
     private static final Logger logger = LogManager.getLogger();
 
     public Wrapper(IAlgorithm algorithm, WrapperConfig config) {
         Cache.init(config.commConfig.getMaxCacheSize());
         mConfig = config;
-        dataAdapter = new DataAdapter(mConfig,new RequestFactory());
-        hkubeAPI = new HKubeAPIImpl(this, dataAdapter);
+        dataAdapter = new DataAdapter(mConfig, new RequestFactory());
+        streamingManager = new StreamingManager(this, config.commConfig);
+        hkubeAPI = new HKubeAPIImpl(this, dataAdapter, streamingManager);
         if (!isDebugMode) {
             zmqServer = new ZMQServer(mConfig.commConfig);
         } else {
             zmqServer = createMockZMQServer();
         }
         dataServer = new DataServer(zmqServer, mConfig.commConfig);
-        mAlgorithm = algorithm;
+        originalAlg = algorithm;
+        mAlgorithm = originalAlg;
+        statelessAlg = new StatelessWrapper(algorithm);
         taskResultStorage = new StorageFactory(config.storageConfig).getTaskStorage();
         workerEncoder = new EncodingManager(mConfig.getEncodingType());
         connect();
@@ -180,10 +191,14 @@ public class Wrapper implements ICommandSender {
 
     }
 
+    private boolean isStreaming() {
+        return (mArgs != null && mArgs.get("kind") != null && mArgs.get("kind").equals("stream"));
+    }
+
     private void onMessage(Map msgAsMap) {
         try {
             String command = (String) msgAsMap.get("command");
-            Map data = (Map) msgAsMap.get("data");
+            Object data = msgAsMap.get("data");
             listeners.forEach(listener -> {
                 logger.debug("got command " + command);
                 listener.onCommand(command, data, isDebugMode);
@@ -193,16 +208,28 @@ public class Wrapper implements ICommandSender {
                 try {
                     switch (command) {
                         case "initialize":
-                            mArgs = data;
+                            mArgs = ((Map) data);
+                            nodeName = (String) ((Map) data).get("nodeName");
+                            if (isStreaming() && "stateless".equals(mArgs.get("stateType"))) {
+                                mAlgorithm = statelessAlg;
+                            }
                             mAlgorithm.Init(mArgs);
                             sendMessage("initialized", null, false);
                             break;
                         case "exit":
                             mAlgorithm.Cleanup();
                             sendMessage("exited", null, false);
+                            if(isStreaming()){
+                                if(streamingManager.messageProducer != null){
+                                    logger.warn("Number of messages lef in queue on exit:" + streamingManager.messageProducer.producerAdapter.getQueueSize());
+                                }
+                            }
                             System.exit(0);
                             break;
                         case "start":
+                            if (isStreaming() && ((List) mArgs.get("childs")).size() > 0) {
+                                setupStreamingProducer();
+                            }
                             sendMessage("started", null, false);
                             Collection input;
                             try {
@@ -237,6 +264,9 @@ public class Wrapper implements ICommandSender {
                                         taskResultStorage.put((String) mArgs.get("jobId"), taskId, encodedData);
                                         sendMessage("storing", resultStoringInfo, false);
                                     }
+                                    if (isStreaming()){
+                                        streamingManager.stopStreaming(false);
+                                    }
                                     sendMessage("done", new HashMap(), false);
                                 } else {
                                     sendMessage("done", res, false);
@@ -246,15 +276,46 @@ public class Wrapper implements ICommandSender {
                                 Map<String, String> res = new HashMap<>();
                                 res.put("code", "Failed");
                                 res.put("message", ex.toString());
-                                sendMessage("errorMessage", res, true);
+                                onError(res);
                             } finally {
                                 mArgs = new HashMap();
                             }
                             break;
                         case "stop":
                             mAlgorithm.Stop();
+                            if(isStreaming()){
+                                if (stopping){
+                                    logger.warn("Got command stop while stopping");
+                                }
+                                else {
+                                    stopping = true;
+                                    boolean forceStop = (boolean) ((Map) data).get("forceStop");
+                                    if (!forceStop) {
+                                        new Thread(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                while (stopping) {
+                                                    sendMessage("stopping", null, false);
+                                                    try {
+                                                        Thread.sleep(1000);
+                                                    } catch (InterruptedException e) {
+                                                        logger.error(e);
+                                                    }
+                                                }
+                                                logger.info("Done stopping");
+                                            }
+                                        }).start();
+                                    }
+                                    streamingManager.stopStreaming(forceStop);
+                                    stopping = false;
+                                }
+                            }
+
                             sendMessage("stopped", null, false);
                             break;
+                        case "serviceDiscoveryUpdate":
+                            discoveryUpdate((List) data);
+
                         default:
                             logger.info("got command: " + command);
 
@@ -264,7 +325,7 @@ public class Wrapper implements ICommandSender {
                     Map<String, String> res = new HashMap<>();
                     res.put("code", "Failed");
                     res.put("message", exc.toString());
-                    sendMessage("errorMessage", res, true);
+                    onError(res);
                     logger.error(exc);
                 }
                 return null;
@@ -274,11 +335,35 @@ public class Wrapper implements ICommandSender {
             Map<String, String> res = new HashMap<>();
             res.put("code", "Failed");
             res.put("message", exc.toString());
-            sendMessage("errorMessage", res, true);
+            onError(res);
             logger.error(exc);
         }
     }
 
+    void setupStreamingProducer() {
+        Map parsedFlows = (Map) mArgs.get("parsedFlow");
+        String defaultFlow = (String) mArgs.get("defaultFlow");
+        streamingManager.setParsedFlows(parsedFlows, defaultFlow);
+
+        streamingManager.setupStreamingProducer(new IStatisticsListener() {
+            @Override
+            public void onStatistics(List<Statistics> statistics) {
+                sendMessage("streamingStatistics", statistics, false);
+            }
+        }, (List) mArgs.get("childs"), nodeName);
+    }
+
+    void discoveryUpdate(List discovery) {
+        logger.info("Got discovery update " + discovery);
+        streamingManager.setupStreamingListeners(discovery, nodeName);
+    }
+
+    public void onError(Object data) {
+        if(isStreaming()){
+            streamingManager.stopStreaming(true);
+        }
+        sendMessage("errorMessage", data, true);
+    }
 
     private void onExit() {
         logger.warn("exiting");

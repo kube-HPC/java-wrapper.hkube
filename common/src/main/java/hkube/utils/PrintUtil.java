@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class PrintUtil {
-    public String getAsJsonStr(Map map){
+    public String getAsJsonStr(Object map){
         return  toJSON(map).toString();
     }
     public Object toJSON(Object object) throws JSONException {

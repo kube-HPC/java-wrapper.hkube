@@ -21,5 +21,6 @@ public class Consts {
     public final static String nodes = "nodes";
     public final static String flowInput = "flowInput";
     public final static String nodeName = "nodeName";
+    public final static  String serviceDiscoveryUpdate = "serviceDiscoveryUpdate";
 
 }

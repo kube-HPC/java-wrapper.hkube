@@ -30,8 +30,11 @@ public class Producer implements IProducer {
     private EncodingManager encodingManager;
     private List<String> consumers;
     String name;
+    boolean active = false;
     public double maxBufferSize;
     ICommandSender errorHandler;
+    ZMQ.Socket backend;
+    Map<String, Date> sent = new HashMap();
 
     public Producer(String name, String port, List<String> consumers, String encoding, double maxBufferSize, ICommandSender errorHandler) {
         this.port = port;
@@ -167,57 +170,82 @@ public class Producer implements IProducer {
             public void run() {
                 try {
                     ZContext context = new ZContext();
-                    ZMQ.Socket backend = context.createSocket(ZMQ.ROUTER);
+                    backend = context.createSocket(ZMQ.ROUTER);
                     backend.bind("tcp://*:" + port); // For workers
                     WorkersPool workers = new WorkersPool(consumers);
-                    while (!Thread.currentThread().isInterrupted()) {
+                    active = true;
+                    while (active) {
                         ZMQ.Poller items = new ZMQ.Poller(consumers.size());
                         items.register(backend, ZMQ.Poller.POLLIN);
-                        items.poll(HEARTBEAT_INTERVAL);
+                        try {
+                            items.poll(HEARTBEAT_INTERVAL);
+                        } catch (Exception exe) {
+                            if (!active) {
+                                break;
+                            }
+                            throw exe;
+                        }
                         if (items.pollin(0)) {
                             // receive whole message (all ZFrames) at once
-                            ZMsg msg = ZMsg.recvMsg(backend);
-                            if (msg == null)
-                                break; // Interrupted
-
-                            // Any sign of life from worker means it's ready
-                            ZFrame address = msg.unwrap();
+                            try {
+                                ZMsg msg = ZMsg.recvMsg(backend);
 
 
-                            // Validate control message, or return reply to client
+                                if (msg == null)
+                                    break; // Interrupted
 
-                            ZFrame frame = msg.pop();
-                            ZFrame consumerNameFrame = msg.pop();
-                            String consumerName = (String) encodingManager.decodeNoHeader(consumerNameFrame.getData());
-                            workers.workerReady(new Worker(address), consumerName);
-                            byte[] data = frame.getData();
-                            if (!(Arrays.equals(data, PPP_HEARTBEAT) || Arrays
-                                    .equals(frame.getData(), PPP_READY))) {
-                                responseAccumulators.stream().forEach(responseAccumlator -> {
-                                    responseAccumlator.onResponse(data, consumerName);
-                                });
+                                // Any sign of life from worker means it's ready
+                                ZFrame addressFrame = msg.unwrap();
+                                String address = Base64.getEncoder().encodeToString(addressFrame.getData());
 
+                                // Validate control message, or return reply to client
+
+                                ZFrame frame = msg.pop();
+                                ZFrame consumerNameFrame = msg.pop();
+                                System.out.print("_________" + frame + "________" + consumerNameFrame);
+                                String consumerName = (String) encodingManager.decodeNoHeader(consumerNameFrame.getData());
+                                workers.workerReady(new Worker(addressFrame), consumerName);
+                                byte[] data = frame.getData();
+                                if (!(Arrays.equals(data, PPP_HEARTBEAT) || Arrays
+                                        .equals(frame.getData(), PPP_READY))) {
+                                    long duration = new Date().getTime() - sent.get(address).getTime();
+                                    responseAccumulators.stream().forEach(responseAccumlator -> {
+                                        responseAccumlator.onResponse(data, consumerName, Long.valueOf(duration));
+                                    });
+                                }
+                                msg.destroy();
+                                workers.sendHeartbeats(backend);
+                                workers.purge();
+                            } catch (Exception exe) {
+                                if (!active) {
+                                    break;
+                                } else throw exe;
                             }
-                            msg.destroy();
-                            workers.sendHeartbeats(backend);
-                            workers.purge();
                         }
                         consumers.stream().forEach(consumerName -> {
                             ZFrame frame = workers.next(consumerName);
                             if (frame != null) {
+                                String address = Base64.getEncoder().encodeToString(frame.getData());
                                 Message message = queue.pop(consumerName);
                                 if (message != null) {
-                                    frame.sendAndDestroy(backend, ZMQ.SNDMORE);
-                                    Flow flow = message.getFlow().getRestOfFlow(consumerName);
-                                    byte[] bytes = encodingManager.encodeNoHeader(flow);
-                                    frame = new ZFrame(bytes);
-                                    frame.sendAndDestroy(backend, ZMQ.SNDMORE);
-                                    bytes = message.getHeader();
-                                    frame = new ZFrame(bytes);
-                                    frame.sendAndDestroy(backend, ZMQ.SNDMORE);
-                                    bytes = message.getData();
-                                    frame = new ZFrame(bytes);
-                                    frame.sendAndDestroy(backend, 0);
+                                    try {
+                                        frame.sendAndDestroy(backend, ZMQ.SNDMORE);
+                                        Flow flow = message.getFlow().getRestOfFlow(name);
+                                        byte[] bytes = encodingManager.encodeNoHeader(flow);
+                                        frame = new ZFrame(bytes);
+                                        frame.sendAndDestroy(backend, ZMQ.SNDMORE);
+                                        bytes = message.getHeader();
+                                        frame = new ZFrame(bytes);
+                                        frame.sendAndDestroy(backend, ZMQ.SNDMORE);
+                                        bytes = message.getData();
+                                        frame = new ZFrame(bytes);
+                                        frame.sendAndDestroy(backend, 0);
+                                        sent.put(address, new Date());
+                                    }catch (Exception exe){
+                                        if(active){
+                                            throw exe;
+                                        }
+                                    }
                                 }
                             }
                         });
@@ -229,7 +257,7 @@ public class Producer implements IProducer {
                     Map<String, String> res = new HashMap<>();
                     res.put("code", "Failed");
                     res.put("message", exc.toString());
-                   errorHandler.sendMessage("errorMessage", res, true);
+                    errorHandler.sendMessage("errorMessage", res, true);
 
                 }
             }
@@ -238,9 +266,26 @@ public class Producer implements IProducer {
 
     }
 
+    public void close(boolean forceStop) {
+        while (queue.anyLeft() && !forceStop) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        active = false;
+        backend.close();
+    }
+
     @Override
     public int getQueueSize(String consumer) {
         return queue.getInQueue(consumer);
+    }
+
+    @Override
+    public int getQueueSize() {
+        return queue.getInQueue();
     }
 
     @Override
@@ -252,5 +297,6 @@ public class Producer implements IProducer {
     public int getDropped(String consumer) {
         return queue.getDropped(consumer);
     }
+
 
 }

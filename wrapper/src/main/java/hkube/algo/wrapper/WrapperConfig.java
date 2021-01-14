@@ -33,7 +33,7 @@ public class WrapperConfig extends Config {
 
 
     public String getStorageVersion() {
-        return "v2";
+        return "v3";
     }
 
     class CommConfig extends Config implements ICommConfig {

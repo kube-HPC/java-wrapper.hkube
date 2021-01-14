@@ -1,9 +1,10 @@
 package hkube.algo;
 
 import hkube.algo.wrapper.DataAdapter;
+import hkube.algo.wrapper.StreamingManager;
 import hkube.api.IHKubeAPI;
 import hkube.api.INode;
-
+import hkube.communication.streaming.IStreamingManagerMsgListener;
 import hkube.utils.PrintUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -17,12 +18,14 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
     int lastExcution = 0;
     ICommandSender commandSender;
     Map<String, APIExecutionFuture> executions = new HashMap();
+    StreamingManager streamingManager;
 
     DataAdapter dataAdapter;
 
-    public HKubeAPIImpl(ICommandSender sender, DataAdapter dataAdapter) {
+    public HKubeAPIImpl(ICommandSender sender, DataAdapter dataAdapter, StreamingManager streamingManager) {
         this.dataAdapter = dataAdapter;
         this.commandSender = sender;
+        this.streamingManager = streamingManager;
         sender.addResponseListener(this);
     }
 
@@ -133,7 +136,7 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
 
 
     @Override
-    public void onCommand(String command, Map data, boolean isDebug) {
+    public void onCommand(String command, Object data, boolean isDebug) {
         String[] executionCommands = {"algorithmExecutionDone", "algorithmExecutionError"};
         String[] subPipeCommands = {"subPipelineDone",
                 "subPipelineError", "subPipelineStopped"};
@@ -144,28 +147,51 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
             logger.debug("data null");
         }
         if (Arrays.asList(executionCommands).contains(command)) {
-            String executionId = (String) data.get("execId");
+            String executionId = (String) ((Map)data).get("execId");
             if (!isDebug) {
-                Map results = (Map) data.get("response");
+                Map results = (Map) ((Map)data).get("response");
                 Object res = dataAdapter.getData(results, null);
-                data.put("response", res);
+                ((Map)data).put("response", res);
             }
-            executions.get(executionId).setResult(data);
+            executions.get(executionId).setResult(((Map)data));
         }
         if (Arrays.asList(subPipeCommands).contains(command)) {
-            String executionId = (String) data.get("subPipelineId");
+            String executionId = (String) ((Map)data).get("subPipelineId");
             //Support getting
             if (!isDebug) {
-                Map results = (Map) data.get("response");
+                Map results = (Map) ((Map)data).get("response");
                 Object res = "No results";
                 if (results != null) {
                     res = dataAdapter.getData(results, null);
 
                 }
-                data.put("response", res);
+                ((Map)data).put("response", res);
             }
-            executions.get(executionId).setResult(data);
+            executions.get(executionId).setResult(((Map)data));
         }
         logger.debug("Execution result" + data);
     }
+
+    public void registerInputListener(IStreamingManagerMsgListener onMessage) {
+        streamingManager.registerInputListener(onMessage);
+    }
+
+    public void startMessageListening() {
+       streamingManager.startMessageListening();
+    }
+
+    public void sendMessage(Object msg, String flowName) {
+        streamingManager.sendMessage(msg, flowName);
+    }
+    public void sendMessage(Object msg) {
+        streamingManager.sendMessage(msg, null);
+    }
+    public void stopStreaming(boolean force) {
+        streamingManager.stopStreaming(force);
+    }
+
+    public boolean isListeningToMessages() {
+        return streamingManager.isListeningToMessages();
+    }
+
 }

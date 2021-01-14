@@ -1,6 +1,5 @@
 package hkube.communication.streaming;
 
-import hkube.algo.ICommandSender;
 import hkube.communication.ICommConfig;
 import hkube.encoding.EncodingManager;
 import hkube.model.Header;
@@ -33,7 +32,7 @@ public class MessageListener {
             Object decoded = encodingManager.decodeSeparately(new Header(message.getHeader()), message.getData());
             messageListeners.stream().forEach(
                     listener -> {
-                        listener.onMessage(decoded, messageOriginNodeName);
+                        listener.onMessage(decoded,message.getFlow(), messageOriginNodeName);
                     }
             );
             long end = new Date().getTime();
@@ -45,6 +44,10 @@ public class MessageListener {
 
     public void start() {
         listenerAdapter.start();
+
+    }
+    public void close(boolean force) {
+        listenerAdapter.close();
 
     }
 }
