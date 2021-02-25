@@ -25,7 +25,7 @@ public class BatchRequest extends DataRequest {
         final List<ObjectAndSize> decodedList = new ArrayList<>();
         reply.stream().forEach(rep -> {
             Object decoded = encoder.decodeSeparately(rep.getHeader(), rep.getContent());
-            ObjectAndSize objectAndSize = new ObjectAndSize(decoded,rep.getContent().length);
+            ObjectAndSize objectAndSize = new ObjectAndSize(decoded, rep.getContent().length);
             decodedList.add(objectAndSize);
         });
         if (logger.isDebugEnabled()) {
@@ -39,7 +39,7 @@ public class BatchRequest extends DataRequest {
             ObjectAndSize currentItem = itemIterator.next();
             Object currentValue = currentItem.getValue();
 
-            if (currentValue instanceof  byte[] || (currentValue instanceof Map && (((Map) currentValue).get("hkube_error") == null))) {
+            if (!(currentValue instanceof Map && (((Map) currentValue).get("hkube_error") != null))) {
                 reslutMap.put((String) tasks.get(i), currentItem);
                 i++;
             }
