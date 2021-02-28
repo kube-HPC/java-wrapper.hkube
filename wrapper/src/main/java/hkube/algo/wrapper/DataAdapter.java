@@ -53,16 +53,19 @@ public class DataAdapter {
                     Object item = storage.get(dataReference);
                     String jobId = (String) args.get("jobId");
                     if (item instanceof List) {
-                        Map batchInfp = (Map) ((List) item).get(0);
-                        if (batchInfp.get("tasks") != null) {
-                            value = getData(batchInfp, jobId);
-                        } else {
-                            final ArrayList arr = new ArrayList();
-                            ((List<Map>) item).stream().forEach(info -> {
-                                arr.add(getData(info, jobId));
-                            });
-                            value = arr;
-                        }
+                        value = new ArrayList<>();
+                        ((List) item).stream().forEach( batchInfp -> {
+                            System.out.print("tasks are:" + ((Map)batchInfp).get("tasks"));
+                            if (((Map)batchInfp).get("tasks") != null) {
+                                ((List) value).addAll((List) getData((Map)batchInfp, jobId));
+                            } else {
+                                final ArrayList arr = new ArrayList();
+                                ((List<Map>) item).stream().forEach(info -> {
+                                    arr.add(getData(info, jobId));
+                                });
+                                ((List) value).addAll(arr);
+                            }
+                        });
                     } else {
                         value = getData((Map) item, jobId);
                     }
