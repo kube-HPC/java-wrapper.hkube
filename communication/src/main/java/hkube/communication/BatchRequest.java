@@ -39,7 +39,7 @@ public class BatchRequest extends DataRequest {
             ObjectAndSize currentItem = itemIterator.next();
             Object currentValue = currentItem.getValue();
 
-            if (currentValue instanceof  byte[] || (currentValue instanceof Map && (((Map) currentValue).get("hkube_error") == null))) {
+            if (! (currentValue instanceof Map && (((Map) currentValue).get("hkube_error") != null))) {
                 reslutMap.put((String) tasks.get(i), currentItem);
                 i++;
             }
