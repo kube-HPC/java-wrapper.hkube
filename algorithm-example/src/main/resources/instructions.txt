@@ -4,30 +4,30 @@ Create a HKube java written algorithm.
    a) No access to the internet.
 
      Your java maven project will depend on 3 hkube artifacts:
-     * io.hkube:java-algo-parent:1.3.05:pom
-     * io.hkube:interfaces:1.3.05:jar
-     * io.hkube:algorithm-deployment-descriptor:1.3.05:jar
+     * io.hkube:java-algo-parent:1.3.06:pom
+     * io.hkube:interfaces:1.3.06:jar
+     * io.hkube:algorithm-deployment-descriptor:1.3.06:jar
      hkube artifacts are deployed on maven central remote repository.
      If you have no access to the internet in your dev environment, you'll have to download the artifacts from the internet first.
 
      run:
-     mvn dependency:get -Dartifact=io.hkube:java-algo-parent:1.3.05:pom -Ddest=java-algo-parent.xml
-     mvn dependency:get -Dartifact=io.hkube:interfaces:1.3.05:jar -Ddest=interfaces.jar
-     mvn dependency:get -Dartifact=io.hkube:algorithm-deployment-descriptor:1.3.05:jar -Ddest=algorithm-deployment-descriptor.jar
+     mvn dependency:get -Dartifact=io.hkube:java-algo-parent:1.3.06:pom -Ddest=java-algo-parent.xml
+     mvn dependency:get -Dartifact=io.hkube:interfaces:1.3.06:jar -Ddest=interfaces.jar
+     mvn dependency:get -Dartifact=io.hkube:algorithm-deployment-descriptor:1.3.06:jar -Ddest=algorithm-deployment-descriptor.jar
 
      Then install them in your enclosed environment.
 
      run:
-     mvn org.apache.maven.plugins:maven-install-plugin:3.0.0-M1:install-file  -Dfile=./interfaces.jar -DgroupId=io.hkube -DartifactId=interfaces -Dversion=1.3.05 -Dpackaging=jar
-          mvn org.apache.maven.plugins:maven-install-plugin:3.0.0-M1:install-file  -Dfile=./algorithm-deployment-descriptor.jar -DgroupId=io.hkube -DartifactId=algorithm-deployment-descriptor -Dversion=1.3.05 -Dpackaging=jar
-     mvn org.apache.maven.plugins:maven-install-plugin:3.0.0-M1:install-file  -Dfile=./java-algo-parent.xml -DgroupId=io.hkube -DartifactId=java-algo-parent -Dversion=1.3.05 -Dpackaging=pom
+     mvn org.apache.maven.plugins:maven-install-plugin:3.0.0-M1:install-file  -Dfile=./interfaces.jar -DgroupId=io.hkube -DartifactId=interfaces -Dversion=1.3.06 -Dpackaging=jar
+          mvn org.apache.maven.plugins:maven-install-plugin:3.0.0-M1:install-file  -Dfile=./algorithm-deployment-descriptor.jar -DgroupId=io.hkube -DartifactId=algorithm-deployment-descriptor -Dversion=1.3.06 -Dpackaging=jar
+     mvn org.apache.maven.plugins:maven-install-plugin:3.0.0-M1:install-file  -Dfile=./java-algo-parent.xml -DgroupId=io.hkube -DartifactId=java-algo-parent -Dversion=1.3.06 -Dpackaging=pom
 
    b) pom.xml.
-        * Create a java maven project, have the projects pom.xml inherit from io.hkube:java-algo-parent:1.3.05:pom
+        * Create a java maven project, have the projects pom.xml inherit from io.hkube:java-algo-parent:1.3.06:pom
              <parent>
                    <artifactId>java-algo-parent</artifactId>
                    <groupId>io.hkube</groupId>
-                   <version>1.3.05</version>
+                   <version>1.3.06</version>
               </parent>
 
         * Make sure any dependency your project depends on in runtime, is included in pom.xml dependencies list.
@@ -67,14 +67,14 @@ Create a HKube java written algorithm.
 3. Run algorithm locally (for debugging) and as part of a pipeline on the cluster.
 
     a. Main class.
-       Java main class is hkube.algo.wrapper.Main from artifact io.hkube:wrapper:1.3.05:wide
+       Java main class is hkube.algo.wrapper.Main from artifact io.hkube:wrapper:1.3.06:wide
        
        If working in an enclosed environment you can download it using:
-       mvn dependency:get -Dartifact=io.hkube:wrapper:1.3.05:jar:wide -Ddest=wrapper.jar
+       mvn dependency:get -Dartifact=io.hkube:wrapper:1.3.06:jar:wide -Ddest=wrapper.jar
        
     b. Runtime ClassPath
 
-       1) io.hkube:wrapper:1.3.05:wide.
+       1) io.hkube:wrapper:1.3.06:wide.
 
        2) The written algorithm module and its dependencies.
 
