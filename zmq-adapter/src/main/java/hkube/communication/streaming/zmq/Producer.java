@@ -101,9 +101,6 @@ public class Producer implements IProducer {
             if (workers.remove(worker)) {
                 System.out.printf("I:    %s is alive, waiting\n",
                         worker.address.toString());
-            } else {
-                System.out.printf("I: %s is now ready to work\n",
-                        worker.address.toString());
             }
             workers.offerLast(worker);
         }
@@ -202,7 +199,6 @@ public class Producer implements IProducer {
 
                                 ZFrame frame = msg.pop();
                                 ZFrame consumerNameFrame = msg.pop();
-                                System.out.print("_________" + frame + "________" + consumerNameFrame);
                                 String consumerName = (String) encodingManager.decodeNoHeader(consumerNameFrame.getData());
                                 workers.workerReady(new Worker(addressFrame), consumerName);
                                 byte[] data = frame.getData();

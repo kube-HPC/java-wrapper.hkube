@@ -3,6 +3,8 @@ package hkube.algo.wrapper;
 import hkube.api.IHKubeAPI;
 import hkube.communication.streaming.IStreamingManagerMsgListener;
 import hkube.communication.streaming.Message;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.HashMap;
 import java.util.List;
@@ -14,7 +16,7 @@ public class StatelessWrapper implements IAlgorithm {
     IHKubeAPI api;
     IAlgorithm originalAlgorithm;
     Map options;
-
+    private static final Logger logger = LogManager.getLogger();
     public StatelessWrapper(IAlgorithm originalAlg) {
         originalAlgorithm = originalAlg;
     }
@@ -47,8 +49,10 @@ public class StatelessWrapper implements IAlgorithm {
 
     void invokeAlgorithm(Object msg, String origin) {
         Map args = new HashMap(options);
-        args.put("streamInput", msg);
-        args.put("origin", origin);
+        HashMap streamingInput =  new HashMap();
+        streamingInput.put("message",msg);
+        streamingInput.put("origin",origin);
+        args.put("streamInput", streamingInput);
         originalAlgorithm.Init(args);
 
         try {
@@ -64,6 +68,7 @@ public class StatelessWrapper implements IAlgorithm {
 
     @Override
     public void Stop() {
+        logger.info("Stopping stateless");
         active = false;
         originalAlgorithm.Stop();
     }

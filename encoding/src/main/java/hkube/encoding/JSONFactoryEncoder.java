@@ -26,8 +26,6 @@ public abstract class JSONFactoryEncoder extends BaseEncoder implements IEncoder
 
 
     public HeaderContentPair encodeSeparately(Object obj){
-        Timing timing = new Timing(logger, "encode_separately");
-        timing.start();
         byte[] header;
         byte[] encodedContent;
         ObjectMapper objectMapper = new ObjectMapper(factory);
@@ -44,16 +42,10 @@ public abstract class JSONFactoryEncoder extends BaseEncoder implements IEncoder
             logger.error(e);
             return  null;
         }
-        finally {
-            timing.end();
-            timing.logInfo();
-        }
     }
 
     @Override
     public byte[] encodeNoHeader(Object obj) {
-        Timing timing = new Timing(logger, "encode");
-        timing.start();
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ObjectMapper objectMapper = new ObjectMapper(factory);
         try {
@@ -62,8 +54,6 @@ public abstract class JSONFactoryEncoder extends BaseEncoder implements IEncoder
             e.printStackTrace();
         }
         byte[] result = out.toByteArray();
-        timing.end();
-        timing.logInfo();
         return result;
     }
 
@@ -80,13 +70,9 @@ public abstract class JSONFactoryEncoder extends BaseEncoder implements IEncoder
 
     @Override
     public Object decodeNoHeader(byte[] data) {
-        Timing timing = new Timing(logger, "decodeNoHeader");
-        timing.start();
         ObjectMapper objectMapper = new ObjectMapper(factory);
         try {
             Object result = objectMapper.readValue(data, Object.class);
-            timing.end();
-            timing.logInfo();
             return result;
         } catch (Throwable e) {
             return null;

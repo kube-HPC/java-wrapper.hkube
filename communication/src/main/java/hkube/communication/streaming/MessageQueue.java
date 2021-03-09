@@ -31,7 +31,7 @@ public class MessageQueue {
         });
     }
 
-    public void push(Message message) {
+    synchronized public void push(Message message) {
         memorySize += message.data.length;
         while (maxSize < memorySize) {
             looseMessage();
@@ -44,7 +44,7 @@ public class MessageQueue {
         queue.add(message);
     }
 
-    private void looseMessage() {
+    synchronized private void looseMessage() {
         Message msg = queue.remove(0);
         memorySize -= msg.data.length;
         consumersMap.entrySet().stream().forEach(currentStats -> {
@@ -59,13 +59,13 @@ public class MessageQueue {
 
     }
 
-    public Message pop(String consumer) {
+    synchronized public Message pop(String consumer) {
         int nextIndex = nextMessageIndex(consumer);
         ConsumerStats stats = consumersMap.get(consumer);
         if (nextIndex >= 0) {
             Message msg = queue.get(nextIndex);
             stats.index = nextIndex + 1;
-            while(removeIfNeeded()){
+            while (removeIfNeeded()) {
 
             }
             stats.sent += 1;
@@ -74,14 +74,16 @@ public class MessageQueue {
         return null;
     }
 
-    public boolean removeIfNeeded() {
+    synchronized public boolean removeIfNeeded() {
         if (queue.size() > 0) {
             final Message msg = queue.get(0);
-            if (!consumersMap.entrySet().stream().filter(currentStats -> currentStats.getValue().index == 0).anyMatch(consumerStats -> msg.getFlow().isNextInFlow(sourceName,consumerStats.getKey()))){
+            if (!consumersMap.entrySet().stream().filter(currentStats -> currentStats.getValue().index == 0).anyMatch(consumerStats -> msg.getFlow().isNextInFlow(sourceName, consumerStats.getKey()))) {
                 queue.remove(0);
                 memorySize -= msg.data.length;
                 consumersMap.values().stream().forEach(currentStats -> {
-                    currentStats.index--;
+                    if(currentStats.index != 0) {
+                        currentStats.index--;
+                    }
                 });
                 return true;
             }
@@ -89,7 +91,7 @@ public class MessageQueue {
         return false;
     }
 
-    private int nextMessageIndex(String consumer) {
+    synchronized private int nextMessageIndex(String consumer) {
         int i = consumersMap.get(consumer).index;
         while (i < queue.size()) {
             if (queue.get(i).flow.isNextInFlow(sourceName, consumer)) {
@@ -102,11 +104,13 @@ public class MessageQueue {
 
     public int getInQueue(String consumer) {
         ConsumerStats stats = consumersMap.get(consumer);
-        return stats.added - stats.sent;
+        return stats.added - stats.sent - stats.dropped;
     }
+
     public int getInQueue() {
         return queue.size();
     }
+
     public int getSent(String consumer) {
         ConsumerStats stats = consumersMap.get(consumer);
         return stats.sent;

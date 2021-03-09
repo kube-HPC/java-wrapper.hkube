@@ -50,7 +50,7 @@ public class StreamingManager implements IMessageListener {
 
 
     void setupStreamingProducer(IStatisticsListener onStatistics, List nextNodes, String me) {
-        Producer zmqProducer = new Producer(me, commConfig.getStreamListeningPort(), nextNodes, commConfig.getEncodingType(), commConfig.getStreamMaxBufferSize(), errorHandler);
+        Producer zmqProducer = new Producer(me, commConfig.getStreamListeningPort(), nextNodes, commConfig.getEncodingType(), commConfig.getStreamMaxBufferSize() * 1024d * 1024, errorHandler);
         messageProducer = new MessageProducer(zmqProducer, commConfig, nextNodes);
         messageProducer.registerStatisticsListener(onStatistics);
         if (nextNodes.size() > 0) {
@@ -116,14 +116,14 @@ public class StreamingManager implements IMessageListener {
         }
 
         if (messageProducer.getConsumers().size() > 0) {
-            Flow flow = null;
-            if (flowName == null) {
-                flow = (Flow) local.get();
-                if (flow == null) {
+            Flow flow;
+            flow = (Flow) local.get();
+            if (flow == null || flowName != null) {
+                if (flowName == null) {
                     flowName = defaultFlow;
-                    List parsedFlow = parsedFlows.get(flowName);
-                    flow = new Flow(parsedFlow);
                 }
+                List parsedFlow = parsedFlows.get(flowName);
+                flow = new Flow(parsedFlow);
             }
             messageProducer.produce(flow, msg);
         }

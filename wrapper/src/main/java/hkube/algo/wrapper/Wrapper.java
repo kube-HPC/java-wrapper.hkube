@@ -151,7 +151,6 @@ public class Wrapper implements ICommandSender {
     }
 
     public void sendMessage(String command, Object data, boolean isError) {
-        logger.info("Sending message to worker: " + command);
         Map<String, Object> toSend = new HashMap();
         toSend.put("command", command);
         if (isError) {
@@ -214,10 +213,12 @@ public class Wrapper implements ICommandSender {
                                 mAlgorithm = statelessAlg;
                             }
                             mAlgorithm.Init(mArgs);
+                            logger.info("Sending initialized");
                             sendMessage("initialized", null, false);
                             break;
                         case "exit":
                             mAlgorithm.Cleanup();
+                            logger.info("Sending exited");
                             sendMessage("exited", null, false);
                             if(isStreaming()){
                                 if(streamingManager.messageProducer != null){
@@ -230,6 +231,7 @@ public class Wrapper implements ICommandSender {
                             if (isStreaming() && ((List) mArgs.get("childs")).size() > 0) {
                                 setupStreamingProducer();
                             }
+                            logger.info("Sending started");
                             sendMessage("started", null, false);
                             Collection input;
                             try {
@@ -257,7 +259,7 @@ public class Wrapper implements ICommandSender {
                                     logger.debug("result storing data" + resultStoringInfo);
                                 }
                                 if (!isDebugMode) {
-                                    if (dataAdded) {
+                                    logger.info("Sending storeing");                                    if (dataAdded) {
                                         sendMessage("storing", resultStoringInfo, false);
                                         taskResultStorage.put((String) mArgs.get("jobId"), taskId, encodedData);
                                     } else {

@@ -43,6 +43,7 @@ public class MessageListener {
     }
 
     public void start() {
+        System.out.print("Starting listener to " + this.messageOriginNodeName);
         listenerAdapter.start();
 
     }

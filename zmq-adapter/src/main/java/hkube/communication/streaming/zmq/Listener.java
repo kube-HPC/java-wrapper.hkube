@@ -10,6 +10,8 @@ import hkube.communication.streaming.Flow;
 import hkube.communication.streaming.IListener;
 import hkube.communication.streaming.Message;
 import hkube.encoding.EncodingManager;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.zeromq.*;
 import org.zeromq.ZMQ.Poller;
 import org.zeromq.ZMQ.Socket;
@@ -36,7 +38,7 @@ public class Listener implements IListener {
     private final static String PPP_DISCONNECT = "\003"; //  Signals worker heartbeat
     private boolean active = false;
     ZMQ.Poller poller;
-
+    private static final Logger logger = LogManager.getLogger();
     public Listener(String remoteHost, String remotePort, String encoding, String name, ICommandSender errorHandler) {
         this.remoteHost = remoteHost;
         this.remotePort = remotePort;
@@ -53,19 +55,23 @@ public class Listener implements IListener {
 
     private final static String WORKER_READY = "\001";
 
-    private static Socket worker_socket(ZMQ.Context ctx) {
+    private  Socket worker_socket(ZMQ.Context ctx) {
         Random rand = new Random(System.nanoTime());
         Socket worker = ctx.socket(ZMQ.DEALER);
         String identity = String.format(
                 "%04X-%04X", rand.nextInt(0x10000), rand.nextInt(0x10000)
         );
         worker.setIdentity(identity.getBytes());
-        worker.connect("tcp://localhost:5556");
+        worker.connect("tcp://" + remoteHost + ":" + remotePort);
 
         //  Tell queue we're ready for work
         System.out.println("I: worker ready\n");
         ZFrame frame = new ZFrame(PPP_READY);
+        frame.send(worker, ZMQ.SNDMORE);
+        frame = new ZFrame(encodingManager.encodeNoHeader(name));
         frame.send(worker, 0);
+        poller = new ZMQ.Poller(1);
+        poller.register(worker, Poller.POLLIN);
 
         return worker;
     }
@@ -77,24 +83,7 @@ public class Listener implements IListener {
             public void run() {
                 try {
                     ZMQ.Context ctx = ZMQ.context(1);
-                    worker = ctx.socket(ZMQ.DEALER);
-
-                    //  Set random identity to make tracing easier
-                    Random rand = new Random(System.nanoTime());
-                    String identity = String.format(
-                            "%04X-%04X", rand.nextInt(0x10000), rand.nextInt(0x10000)
-                    );
-                    worker.setIdentity(identity.getBytes());
-                    worker.connect("tcp://" + remoteHost + ":" + remotePort);
-
-                    //  Tell broker we're ready for work
-                    System.out.printf("I: (%s) worker ready\n", identity);
-                    ZFrame frame = new ZFrame(WORKER_READY);
-                    frame.send(worker, ZMQ.SNDMORE);
-                    frame = new ZFrame(encodingManager.encodeNoHeader(name));
-                    frame.send(worker, 0);
-                    poller = new ZMQ.Poller(1);
-                    poller.register(worker, Poller.POLLIN);
+                    worker = worker_socket(ctx);
 
                     //  If liveness hits zero, queue is considered disconnected
                     int liveness = HEARTBEAT_LIVENESS;
@@ -104,10 +93,11 @@ public class Listener implements IListener {
                     long heartbeat_at = System.currentTimeMillis() + HEARTBEAT_INTERVAL;
                     active = true;
                     while (active) {
-                        System.out.print("About to poll");
                         int rc = poller.poll(HEARTBEAT_INTERVAL);
-                        if (rc == -1)
+                        if (rc == -1) {
+                            System.out.print("Poll failed break loop");
                             break; //  Interrupted
+                        }
                         if (poller.pollin(0)) {
                             //  Get message
                             //  - 3-part envelope + content -> request
@@ -115,8 +105,10 @@ public class Listener implements IListener {
                             ZMsg zmqMsg;
                             synchronized (this.getClass()) {
                                 zmqMsg = ZMsg.recvMsg(worker);
-                                if (zmqMsg == null)
+                                if (zmqMsg == null) {
+                                    System.out.print("Got null frame break loop");
                                     break; //  Interrupted
+                                }
 
                                 //  To test the robustness of the queue implementation we
                                 //  simulate various typical problems, such as the worker
@@ -124,7 +116,7 @@ public class Listener implements IListener {
                                 //  cycles so that the architecture can get up and running
                                 //  first:
                                 if (zmqMsg.size() == 3) {
-                                    frame = zmqMsg.pop();
+                                    ZFrame frame = zmqMsg.pop();
                                     byte[] flowBytes = frame.getData();
                                     frame = zmqMsg.pop();
                                     byte[] header = frame.getData();
@@ -146,7 +138,7 @@ public class Listener implements IListener {
                                 //  means the queue was (recently) alive, so reset our
                                 //  liveness indicator:
                                 if (zmqMsg.size() == 1) {
-                                    frame = zmqMsg.getFirst();
+                                    ZFrame frame = zmqMsg.getFirst();
                                     String frameData = new String(
                                             frame.getData()
                                     );
@@ -184,8 +176,6 @@ public class Listener implements IListener {
                                     interval *= 2;
                                 worker.close();
                                 worker = worker_socket(ctx);
-                                poller = new ZMQ.Poller(1);
-                                poller.register(worker, Poller.POLLIN);
                                 liveness = HEARTBEAT_LIVENESS;
                             }
 
@@ -194,7 +184,7 @@ public class Listener implements IListener {
                             long now = System.currentTimeMillis();
                             heartbeat_at = now + HEARTBEAT_INTERVAL;
                             System.out.println("I: worker heartbeat\n");
-                            frame = new ZFrame(PPP_HEARTBEAT);
+                            ZFrame frame = new ZFrame(PPP_HEARTBEAT);
                             frame.send(worker, ZMQ.SNDMORE);
                             frame = new ZFrame(encodingManager.encodeNoHeader(name));
                             frame.send(worker, 0);
@@ -216,6 +206,7 @@ public class Listener implements IListener {
         active = false;
         try {
             Thread.sleep(HEARTBEAT_INTERVAL);
+            logger.info("closing zmq listener");
             while (poller.pollin(0)) {
                 //  Get message
                 //  - 3-part envelope + content -> request

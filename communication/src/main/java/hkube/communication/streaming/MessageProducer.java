@@ -15,7 +15,6 @@ public class MessageProducer {
 
 
     List<String> consumers;
-    Double maxMemorySize;
     EncodingManager encoding;
     int statisticsInterval;
     public IProducer producerAdapter;
@@ -30,7 +29,6 @@ public class MessageProducer {
     public MessageProducer(IProducer producerAdapter, ICommConfig config, List<String> consumerNodes) {
         consumers = consumerNodes;
         this.producerAdapter = producerAdapter;
-        maxMemorySize = config.getStreamMaxBufferSize() * 1024d * 1024;
         statisticsInterval = config.getstreamstatisticsinterval() * 1000;
         encoding = new EncodingManager(config.getEncodingType());
         config.getstreamstatisticsinterval();
