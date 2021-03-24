@@ -9,6 +9,11 @@ import java.util.*;
 public class MessageListener {
     String messageOriginNodeName;
     EncodingManager encodingManager;
+
+    public IListener getListenerAdapter() {
+        return listenerAdapter;
+    }
+
     IListener listenerAdapter;
     List<IMessageListener> messageListeners= new ArrayList<>();
 
@@ -41,14 +46,17 @@ public class MessageListener {
             return encodingManager.encodeNoHeader(result);
         }
     }
+    public void ready(boolean isReady){
+        listenerAdapter.ready(isReady);
 
+    }
     public void start() {
         System.out.print("Starting listener to " + this.messageOriginNodeName);
         listenerAdapter.start();
 
     }
     public void close(boolean force) {
-        listenerAdapter.close();
+        listenerAdapter.close(false);
 
     }
 }

@@ -4,22 +4,44 @@ import java.util.ArrayDeque;
 
 public class Statistics {
     String nodeName;
+    ArrayDeque<Double> netDurations;
     Integer sent;
     Integer queueSize;
     Integer responses;
-    ArrayDeque<Double> durations;
+    ArrayDeque<Long> durations;
     Integer dropped;
 
 
-    public Statistics(String nodeName, Integer sent, Integer queueSize, ArrayDeque<Double> durations, Integer responses, Integer dropped) {
+    ArrayDeque<Long> queueDurations;
+
+
+
+
+    public Statistics(String nodeName, Integer sent, Integer queueSize, ArrayDeque<Long> duration, ArrayDeque<Double> netDurations, Integer responses, Integer dropped, ArrayDeque<Long> queueDurations) {
         this.nodeName = nodeName;
         this.sent = sent;
         this.queueSize = queueSize;
         this.responses = responses;
-        this.durations = durations;
+        this.durations = duration;
         this.dropped = dropped;
+        this.netDurations = netDurations;
+        this.queueDurations = queueDurations;
+    }
+    public ArrayDeque<Long> getQueueDurations() {
+        return queueDurations;
     }
 
+    public void setQueueDurations(ArrayDeque<Long> queueDurations) {
+        this.queueDurations = queueDurations;
+    }
+
+    public ArrayDeque<Double> getNetDurations() {
+        return netDurations;
+    }
+
+    public void setNetDurations(ArrayDeque<Double> netDurations) {
+        this.netDurations = netDurations;
+    }
     public String getNodeName() {
         return nodeName;
     }
@@ -44,11 +66,11 @@ public class Statistics {
         this.queueSize = queueSize;
     }
 
-    public ArrayDeque<Double> getDurations() {
+    public ArrayDeque<Long> getDurations() {
         return durations;
     }
 
-    public void setDurations(ArrayDeque<Double> durations) {
+    public void setDurations(ArrayDeque<Long> durations) {
         this.durations = durations;
     }
 
@@ -68,6 +90,7 @@ public class Statistics {
         this.dropped = dropped;
     }
 
+
     @Override
     public String toString() {
         return "Statistics{" +
@@ -75,8 +98,9 @@ public class Statistics {
                 ", sent=" + sent +
                 ", queueSize=" + queueSize +
                 ", responses=" + responses +
-                ", durations=" + durations +
+                ", netDurations=" + netDurations +
                 ", dropped=" + dropped +
-                '}';
+                ", durations=" + durations +
+                "}";
     }
 }

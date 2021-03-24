@@ -20,10 +20,11 @@ public class MessageProducer {
     public IProducer producerAdapter;
     Map durationCache = new HashMap();
     Map<String, ArrayDeque<Long>> grossDurationCache = new HashMap();
+
     Map<String, Integer> responseCount = new HashMap();
     Boolean active = true;
     int printStatistics = 0;
-    List<IStatisticsListener> listeners = new ArrayList();
+    List<IStatisticsListener> statisticsListeners = new ArrayList();
     private static final Logger logger = LogManager.getLogger();
 
     public MessageProducer(IProducer producerAdapter, ICommConfig config, List<String> consumerNodes) {
@@ -71,6 +72,7 @@ public class MessageProducer {
     public void produce(Flow meesageFlowPattern, Object obj) {
         HeaderContentPair pair = encoding.encodeSeparately(obj);
         Message msg = new Message(pair.getContent(), pair.getHeaderAsBytes(), meesageFlowPattern);
+
         producerAdapter.produce(msg);
     }
 
@@ -89,15 +91,20 @@ public class MessageProducer {
     }
 
 
-    ArrayDeque<Double> resetResponseCache(String consumerNode) {
+    ArrayDeque<Double> resetDurationCache(String consumerNode) {
         ArrayDeque<Double> durations = (ArrayDeque<Double>) durationCache.get(consumerNode);
-        durationCache.put(consumerNode, new ArrayDeque<Float>());
+        durationCache.put(consumerNode, new ArrayDeque<>());
         return durations;
     }
 
+    ArrayDeque<Long> resetGrossDurationCache(String consumerNode) {
+        ArrayDeque<Long> durations = grossDurationCache.get(consumerNode);
+        grossDurationCache.put(consumerNode, new ArrayDeque<>());
+        return durations;
+    }
 
     public void registerStatisticsListener(IStatisticsListener listener) {
-        listeners.add(listener);
+        statisticsListeners.add(listener);
     }
 
     void sendStatistics() {
@@ -105,14 +112,16 @@ public class MessageProducer {
         consumers.stream().forEach(consumer -> {
             int sent = producerAdapter.getSent(consumer);
             int queueSize = producerAdapter.getQueueSize(consumer);
-            ArrayDeque<Double> durations = resetResponseCache(consumer);
+            ArrayDeque<Double> durations = resetDurationCache(consumer);
+            ArrayDeque<Long> grossDuration = resetGrossDurationCache(consumer);
             int dropped = producerAdapter.getDropped(consumer);
             int responses = responseCount.get(consumer);
-            Statistics stats = new Statistics(consumer, sent, queueSize, durations, responses, dropped);
+            ArrayDeque queueDurations = producerAdapter.resetQueueTimeDurations(consumer);
+            Statistics stats = new Statistics(consumer, sent, queueSize, grossDuration, durations, responses, dropped, queueDurations);
             statistics.add(stats);
 
         });
-        listeners.stream().forEach(listener -> {
+        statisticsListeners.stream().forEach(listener -> {
             listener.onStatistics(statistics);
         });
         printStatistics++;
@@ -128,7 +137,9 @@ public class MessageProducer {
         producerAdapter.start();
         sendStatisticsEvery();
     }
+
     public void close(boolean force) {
         producerAdapter.close(force);
+        active = false;
     }
 }

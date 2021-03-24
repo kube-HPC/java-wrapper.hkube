@@ -16,7 +16,7 @@ public class SleepAlg implements IAlgorithm {
         Map msg = (Map) ((Map) input.get("streamInput")).get("message");
         String nodeName = (String) input.get("nodeName");
         msg.put("trace", msg.get("trace") + nodeName);
-        System.out.println("handling " + msg.get("id") + " on " + msg.get("trace"));
+        System.out.println("handling " + msg.get("id") + " on " + msg.get("trace") + " " +System.getenv().get("POD_IP"));
         int rate = (int) ((Map) ((List) input.get("input")).get(0)).get("rate");
         Thread.sleep(1000 / rate);
         return msg;

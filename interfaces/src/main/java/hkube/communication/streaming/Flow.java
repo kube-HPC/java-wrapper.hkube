@@ -84,5 +84,7 @@ public class Flow {
         flow.setNodes(nodesCopy);
         return flow;
     }
-
+    public List asList(){
+        return nodes;
+    }
 }

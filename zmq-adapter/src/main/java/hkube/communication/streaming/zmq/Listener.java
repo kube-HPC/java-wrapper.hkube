@@ -1,9 +1,9 @@
 package hkube.communication.streaming.zmq;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 
 import hkube.algo.ICommandSender;
 import hkube.communication.streaming.Flow;
@@ -17,6 +17,8 @@ import org.zeromq.ZMQ.Poller;
 import org.zeromq.ZMQ.Socket;
 import hkube.communication.streaming.IMessageHandler;
 
+import static hkube.communication.streaming.zmq.Signals.*;
+
 public class Listener implements IListener {
     String remoteHost;
     String remotePort;
@@ -25,37 +27,58 @@ public class Listener implements IListener {
     EncodingManager encodingManager;
     ICommandSender errorHandler;
     ZMQ.Socket worker;
+    IReadyUpdater readyUpdater;
+    Listener me;
+    long lastReceiveTime;
+    static Lock lock = new ReentrantLock();
 
-
-    private final static int HEARTBEAT_LIVENESS = 3;     //  3-5 is reasonable
-    private final static int HEARTBEAT_INTERVAL = 1000;  //  msecs
+    private final static int HEARTBEAT_LIVENESS = 300;     //  3-5 is reasonable
+    private final static int HEARTBEAT_INTERVAL = 10;  //  msecs
     private final static int INTERVAL_INIT = 1000;  //  Initial reconnect
     private final static int INTERVAL_MAX = 32000; //  After exponential backoff
+    private final static int HEARTBEAT_LIVENESS_TIMEOUT = 30000;
+    private final static int POLL_TIMEOUT_MS = 1000;
+    private final static int STOP_TIMEOUT_MS = 5000;
 
+    private long lastSentTime;
     //  Paranoid Pirate Protocol constants
-    private final static String PPP_READY = "\001"; //  Signals worker is ready
-    private final static String PPP_HEARTBEAT = "\002";
-    private final static String PPP_DISCONNECT = "\003"; //  Signals worker heartbeat
+    //  Signals worker heartbeat
     private boolean active = false;
+    private boolean forceClose = false;
     ZMQ.Poller poller;
     private static final Logger logger = LogManager.getLogger();
-    public Listener(String remoteHost, String remotePort, String encoding, String name, ICommandSender errorHandler) {
+
+    public Listener(String remoteHost, String remotePort, String encoding, String name, IReadyUpdater readyUpdater, ICommandSender errorHandler) {
         this.remoteHost = remoteHost;
         this.remotePort = remotePort;
         this.errorHandler = errorHandler;
         this.encodingManager = new EncodingManager(encoding);
         this.name = name;
-
-
+        this.readyUpdater = readyUpdater;
+        id = remoteHost + remotePort;
+        me = this;
     }
 
     public void setMessageHandler(IMessageHandler handler) {
         messageHandler = handler;
     }
 
-    private final static String WORKER_READY = "\001";
+    @Override
+    public String getId() {
+        return id;
+    }
 
-    private  Socket worker_socket(ZMQ.Context ctx) {
+    @Override
+    public void ready(boolean isReady) {
+        this.isReady = isReady;
+    }
+
+    boolean isReady = true;
+    boolean isReadySentValue = true;
+    String id;
+
+
+    private void worker_socket(ZMQ.Context ctx) {
         Random rand = new Random(System.nanoTime());
         Socket worker = ctx.socket(ZMQ.DEALER);
         String identity = String.format(
@@ -66,14 +89,11 @@ public class Listener implements IListener {
 
         //  Tell queue we're ready for work
         System.out.println("I: worker ready\n");
-        ZFrame frame = new ZFrame(PPP_READY);
-        frame.send(worker, ZMQ.SNDMORE);
-        frame = new ZFrame(encodingManager.encodeNoHeader(name));
-        frame.send(worker, 0);
+        this.worker = worker;
+        send(PPP_READY, null);
         poller = new ZMQ.Poller(1);
         poller.register(worker, Poller.POLLIN);
-
-        return worker;
+        lastReceiveTime = new Date().getTime();
     }
 
     public void start() {
@@ -83,17 +103,23 @@ public class Listener implements IListener {
             public void run() {
                 try {
                     ZMQ.Context ctx = ZMQ.context(1);
-                    worker = worker_socket(ctx);
+                    worker_socket(ctx);
 
                     //  If liveness hits zero, queue is considered disconnected
-                    int liveness = HEARTBEAT_LIVENESS;
                     int interval = INTERVAL_INIT;
 
                     //  Send out heartbeats at regular intervals
                     long heartbeat_at = System.currentTimeMillis() + HEARTBEAT_INTERVAL;
                     active = true;
                     while (active) {
-                        int rc = poller.poll(HEARTBEAT_INTERVAL);
+                        if (!lock.tryLock()) {
+                            if (sendIsReady()) {
+                                lock.lock();
+                            } else {
+                                continue;
+                            }
+                        }
+                        int rc = poller.poll(POLL_TIMEOUT_MS);
                         if (rc == -1) {
                             System.out.print("Poll failed break loop");
                             break; //  Interrupted
@@ -103,65 +129,44 @@ public class Listener implements IListener {
                             //  - 3-part envelope + content -> request
                             //  - 1-part HEARTBEAT -> heartbeat
                             ZMsg zmqMsg;
-                            synchronized (this.getClass()) {
-                                zmqMsg = ZMsg.recvMsg(worker);
-                                if (zmqMsg == null) {
-                                    System.out.print("Got null frame break loop");
-                                    break; //  Interrupted
-                                }
 
-                                //  To test the robustness of the queue implementation we
-                                //  simulate various typical problems, such as the worker
-                                //  crashing, or running very slowly. We do this after a few
-                                //  cycles so that the architecture can get up and running
-                                //  first:
-                                if (zmqMsg.size() == 3) {
-                                    ZFrame frame = zmqMsg.pop();
-                                    byte[] flowBytes = frame.getData();
-                                    frame = zmqMsg.pop();
-                                    byte[] header = frame.getData();
-                                    frame = zmqMsg.pop();
-                                    byte[] data = frame.getData();
-                                    Map flowMap = (Map) encodingManager.decodeNoHeader(flowBytes);
-                                    Flow flow = new Flow((List) flowMap.get("nodes"));
-                                    Message msg = new Message(data, header, flow);
-                                    byte[] response = messageHandler.onMessage(msg);
-                                    frame = new ZFrame(response);
-                                    frame.send(worker, ZMQ.SNDMORE);
-                                    frame = new ZFrame(encodingManager.encodeNoHeader(name));
-                                    frame.send(worker, 0);
-                                    liveness = HEARTBEAT_LIVENESS;
-                                }
+                            zmqMsg = ZMsg.recvMsg(worker);
+                            if (zmqMsg == null) {
+                                System.out.print("Got null frame break loop");
+                                break; //  Interrupted
                             }
-                            if (zmqMsg.size() != 3 && zmqMsg.size() != 0)
-                                //  When we get a heartbeat message from the queue, it
-                                //  means the queue was (recently) alive, so reset our
-                                //  liveness indicator:
-                                if (zmqMsg.size() == 1) {
-                                    ZFrame frame = zmqMsg.getFirst();
-                                    String frameData = new String(
-                                            frame.getData()
-                                    );
-                                    if (PPP_HEARTBEAT.equals(frameData))
-                                        liveness = HEARTBEAT_LIVENESS;
-                                    else {
-                                        System.out.println("E: invalid message\n");
-                                        zmqMsg.dump(System.out);
-                                    }
-                                    zmqMsg.destroy();
-                                } else {
-                                    System.out.println("E: invalid message\n");
-                                    zmqMsg.dump(System.out);
-                                }
+
+                            //  To test the robustness of the queue implementation we
+                            //  simulate various typical problems, such as the worker
+                            //  crashing, or running very slowly. We do this after a few
+                            //  cycles so that the architecture can get up and running
+                            //  first:
+                            ZFrame signalFrame = zmqMsg.pop();
+                            if (Signals.getByBytes(signalFrame.getData()) == PPP_MSG) {
+                                readyUpdater.setOthersAsNotReady(me);
+                                ZFrame frame = zmqMsg.pop();
+                                byte[] flowBytes = frame.getData();
+                                frame = zmqMsg.pop();
+                                byte[] header = frame.getData();
+                                frame = zmqMsg.pop();
+                                byte[] data = frame.getData();
+                                List flowList = (List) encodingManager.decodeNoHeader(flowBytes);
+                                Flow flow = new Flow(flowList);
+                                Message msg = new Message(data, header, flow);
+                                byte[] response = messageHandler.onMessage(msg);
+                                readyUpdater.setOthersAsReady(me);
+                                send(PPP_DONE, response);
+                            }
+                            lastReceiveTime = new Date().getTime();
                             interval = INTERVAL_INIT;
                         } else
                             //  If the queue hasn't sent us heartbeats in a while,
                             //  destroy the socket and reconnect. This is the simplest
                             //  most brutal way of discarding any messages we might have
                             //  sent in the meantime.
-                            if (--liveness == 0) {
+                            if (new Date().getTime() - lastReceiveTime > HEARTBEAT_LIVENESS_TIMEOUT) {
                                 System.out.println(
-                                        "W: heartbeat failure, can't reach queue\n"
+                                        "W: heartbeat failure, can't reach queue " + id + "\n"
                                 );
                                 System.out.printf(
                                         "W: reconnecting in %sd msec\n", interval
@@ -175,21 +180,15 @@ public class Listener implements IListener {
                                 if (interval < INTERVAL_MAX)
                                     interval *= 2;
                                 worker.close();
-                                worker = worker_socket(ctx);
-                                liveness = HEARTBEAT_LIVENESS;
+                                worker_socket(ctx);
                             }
-
-                        //  Send heartbeat to queue if it's time
-                        if (System.currentTimeMillis() > heartbeat_at) {
-                            long now = System.currentTimeMillis();
-                            heartbeat_at = now + HEARTBEAT_INTERVAL;
-                            System.out.println("I: worker heartbeat\n");
-                            ZFrame frame = new ZFrame(PPP_HEARTBEAT);
-                            frame.send(worker, ZMQ.SNDMORE);
-                            frame = new ZFrame(encodingManager.encodeNoHeader(name));
-                            frame.send(worker, 0);
+                        if (new Date().getTime() - lastSentTime > HEARTBEAT_INTERVAL && active) {
+                            send(PPP_HEARTBEAT, null);
                         }
+                        lock.unlock();
+                        Thread.sleep(1);
                     }
+                    sendClose();
                 } catch (Exception exc) {
                     exc.printStackTrace();
                     Map<String, String> res = new HashMap<>();
@@ -202,47 +201,72 @@ public class Listener implements IListener {
         thread.start();
     }
 
-    public void close() {
+    void send(Signals signal, byte[] response) {
+        ZFrame frame = new ZFrame(signal.toString());
+        frame.send(worker, ZMQ.SNDMORE);
+        frame = new ZFrame(encodingManager.encodeNoHeader(name));
+        frame.send(worker, ZMQ.SNDMORE);
+        if (response == null) {
+            response = PPP_EMPTY.toString().getBytes();
+        }
+        frame = new ZFrame(response);
+        frame.send(worker, 0);
+        lastSentTime = new Date().getTime();
+    }
+
+    boolean sendIsReady() {
+        if (isReady != isReadySentValue) {
+            if (isReady) {
+                send(PPP_READY, null);
+            } else {
+                send(PPP_NOT_READY, null);
+            }
+            isReadySentValue = isReady;
+            return true;
+        }
+        return false;
+    }
+
+    public void close(boolean forceClose) {
         active = false;
-        try {
-            Thread.sleep(HEARTBEAT_INTERVAL);
+        this.forceClose = forceClose;
+    }
+
+    public void sendClose() {
+
+
+        if (!forceClose) {
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             logger.info("closing zmq listener");
-            while (poller.pollin(0)) {
+
+            while (poller.pollin(STOP_TIMEOUT_MS)) {
                 //  Get message
                 //  - 3-part envelope + content -> request
                 //  - 1-part HEARTBEAT -> heartbeat
-                synchronized (this.getClass()) {
-                    ZMsg zmqMsg = ZMsg.recvMsg(worker);
-                    if (zmqMsg == null)
-                        break; //  Interrupted
 
-                    //  To test the robustness of the queue implementation we
-                    //  simulate various typical problems, such as the worker
-                    //  crashing, or running very slowly. We do this after a few
-                    //  cycles so that the architecture can get up and running
-                    //  first:
-                    if (zmqMsg.size() == 3) {
-                        ZFrame frame = zmqMsg.pop();
-                        byte[] flowBytes = frame.getData();
-                        frame = zmqMsg.pop();
-                        byte[] header = frame.getData();
-                        frame = zmqMsg.pop();
-                        byte[] data = frame.getData();
-                        Map flowMap = (Map) encodingManager.decodeNoHeader(flowBytes);
-                        Flow flow = new Flow((List) flowMap.get("nodes"));
-                        Message msg = new Message(data, header, flow);
-                        messageHandler.onMessage(msg);
-                        frame = new ZFrame(PPP_DISCONNECT);
-                        frame.send(worker, ZMQ.SNDMORE);
-                        frame = new ZFrame(encodingManager.encodeNoHeader(name));
-                        frame.send(worker, 0);
-                    }
+                lock.lock();
+                ZMsg zmqMsg = ZMsg.recvMsg(worker);
+                ZFrame signalFrame = zmqMsg.pop();
+                if (new String(signalFrame.getData()).equals(PPP_MSG)) {
+                    ZFrame frame = zmqMsg.pop();
+                    byte[] flowBytes = frame.getData();
+                    frame = zmqMsg.pop();
+                    byte[] header = frame.getData();
+                    frame = zmqMsg.pop();
+                    byte[] data = frame.getData();
+                    Map flowMap = (Map) encodingManager.decodeNoHeader(flowBytes);
+                    Flow flow = new Flow((List) flowMap.get("nodes"));
+                    Message msg = new Message(data, header, flow);
+                    byte[] result = messageHandler.onMessage(msg);
+                    send(PPP_DONE_DISCONNECT, result);
                 }
+                lock.unlock();
             }
-
-        } catch (InterruptedException e) {
-            e.printStackTrace();
         }
-
+        worker.close();
     }
 }

@@ -68,11 +68,10 @@ public class SendingStateful implements IAlgorithm {
             if (sent > totalMsg) {
                 Thread.sleep( (Integer)sleepTime.get(1) * 1000);
                 active = false;
-                Thread.sleep(1000);
-                active = true;
             }
 
         }
+        Thread.sleep(120000);
         return null;
     }
 

@@ -51,6 +51,7 @@ public class Wrapper implements ICommandSender {
     private static final Logger logger = LogManager.getLogger();
 
     public Wrapper(IAlgorithm algorithm, WrapperConfig config) {
+        System.out.println("IP is " + System.getenv("POD_IP"));
         Cache.init(config.commConfig.getMaxCacheSize());
         mConfig = config;
         dataAdapter = new DataAdapter(mConfig, new RequestFactory());
@@ -220,16 +221,19 @@ public class Wrapper implements ICommandSender {
                             mAlgorithm.Cleanup();
                             logger.info("Sending exited");
                             sendMessage("exited", null, false);
-                            if(isStreaming()){
-                                if(streamingManager.messageProducer != null){
+                            if (isStreaming()) {
+                                if (streamingManager.messageProducer != null) {
                                     logger.warn("Number of messages lef in queue on exit:" + streamingManager.messageProducer.producerAdapter.getQueueSize());
                                 }
                             }
                             System.exit(0);
                             break;
                         case "start":
-                            if (isStreaming() && ((List) mArgs.get("childs")).size() > 0) {
-                                setupStreamingProducer();
+                            if (isStreaming()) {
+                                streamingManager.clearListeners();
+                                if (((List) mArgs.get("childs")).size() > 0) {
+                                    setupStreamingProducer();
+                                }
                             }
                             logger.info("Sending started");
                             sendMessage("started", null, false);
@@ -259,14 +263,15 @@ public class Wrapper implements ICommandSender {
                                     logger.debug("result storing data" + resultStoringInfo);
                                 }
                                 if (!isDebugMode) {
-                                    logger.info("Sending storeing");                                    if (dataAdded) {
+                                    logger.info("Sending storeing");
+                                    if (dataAdded) {
                                         sendMessage("storing", resultStoringInfo, false);
                                         taskResultStorage.put((String) mArgs.get("jobId"), taskId, encodedData);
                                     } else {
                                         taskResultStorage.put((String) mArgs.get("jobId"), taskId, encodedData);
                                         sendMessage("storing", resultStoringInfo, false);
                                     }
-                                    if (isStreaming()){
+                                    if (isStreaming()) {
                                         streamingManager.stopStreaming(false);
                                     }
                                     sendMessage("done", new HashMap(), false);
@@ -285,31 +290,33 @@ public class Wrapper implements ICommandSender {
                             break;
                         case "stop":
                             mAlgorithm.Stop();
-                            if(isStreaming()){
-                                if (stopping){
+                            if (isStreaming()) {
+                                if (stopping) {
                                     logger.warn("Got command stop while stopping");
-                                }
-                                else {
+                                } else {
                                     stopping = true;
                                     boolean forceStop = (boolean) ((Map) data).get("forceStop");
-                                    if (!forceStop) {
-                                        new Thread(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                while (stopping) {
-                                                    sendMessage("stopping", null, false);
-                                                    try {
-                                                        Thread.sleep(1000);
-                                                    } catch (InterruptedException e) {
-                                                        logger.error(e);
-                                                    }
+                                    Thread stoppingThread = new Thread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            while (stopping) {
+                                                sendMessage("stopping", null, false);
+                                                try {
+                                                    Thread.sleep(1000);
+                                                } catch (InterruptedException e) {
+                                                    logger.error(e);
                                                 }
-                                                logger.info("Done stopping");
                                             }
-                                        }).start();
+                                            logger.info("Done stopping");
+                                        }
+                                    });
+                                    if (!forceStop) {
+
+                                        stoppingThread.start();
                                     }
                                     streamingManager.stopStreaming(forceStop);
                                     stopping = false;
+                                    stoppingThread.join();
                                 }
                             }
 
@@ -361,7 +368,7 @@ public class Wrapper implements ICommandSender {
     }
 
     public void onError(Object data) {
-        if(isStreaming()){
+        if (isStreaming()) {
             streamingManager.stopStreaming(true);
         }
         sendMessage("errorMessage", data, true);

@@ -2,6 +2,7 @@ package hkube.communication.streaming;
 
 import hkube.algo.CommandResponseListener;
 import hkube.algo.ICommandSender;
+import hkube.communication.streaming.zmq.IReadyUpdater;
 import hkube.communication.streaming.zmq.Listener;
 import hkube.communication.streaming.zmq.Producer;
 import org.json.JSONException;
@@ -59,7 +60,17 @@ public class TestStreaming {
             }
         });
         producer.registerResponseAccumulator(accumulator);
-        Listener listener = new Listener("localhost", "4004", "msgpack", "B",new ICommandSender() {
+        Listener listener = new Listener("localhost", "4004", "msgpack", "B",new IReadyUpdater(){
+            @Override
+            public void setOthersAsReady(IListener l) {
+
+            }
+
+            @Override
+            public void setOthersAsNotReady(IListener l) {
+
+            }
+        },new ICommandSender() {
             @Override
             public void sendMessage(String command, Object data, boolean isError) {
 
@@ -113,7 +124,7 @@ public class TestStreaming {
         msg = new Message("Hello".getBytes(), "Header".getBytes(), flow);
         producer.produce(msg);
         try {
-            Thread.sleep(2000);
+            Thread.sleep(4000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

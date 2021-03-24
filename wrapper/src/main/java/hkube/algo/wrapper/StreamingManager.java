@@ -3,6 +3,7 @@ package hkube.algo.wrapper;
 import hkube.algo.ICommandSender;
 import hkube.communication.ICommConfig;
 import hkube.communication.streaming.*;
+import hkube.communication.streaming.zmq.IReadyUpdater;
 import hkube.communication.streaming.zmq.Listener;
 import hkube.communication.streaming.zmq.Producer;
 
@@ -40,15 +41,6 @@ public class StreamingManager implements IMessageListener {
         this.defaultFlow = defaultFlow;
     }
 
-    void sendError(Exception exc) {
-        exc.printStackTrace();
-        Map<String, String> res = new HashMap<>();
-        res.put("code", "Failed");
-        res.put("message", exc.toString());
-        errorHandler.sendMessage("errorMessage", res, true);
-    }
-
-
     void setupStreamingProducer(IStatisticsListener onStatistics, List nextNodes, String me) {
         Producer zmqProducer = new Producer(me, commConfig.getStreamListeningPort(), nextNodes, commConfig.getEncodingType(), commConfig.getStreamMaxBufferSize() * 1024d * 1024, errorHandler);
         messageProducer = new MessageProducer(zmqProducer, commConfig, nextNodes);
@@ -60,15 +52,35 @@ public class StreamingManager implements IMessageListener {
 
 
     void setupStreamingListeners(List<Map> parents, String nodeName) {
+        IReadyUpdater readyUpdater = new IReadyUpdater() {
+            @Override
+            public void setOthersAsReady(IListener listener) {
+                synchronized (messageListeners) {
+                    messageListeners.values().stream().filter(messageListener -> !messageListener.getListenerAdapter().equals(listener)).forEach(messageListener -> {
+                        messageListener.ready(true);
+                    });
+                }
+            }
+
+            @Override
+            public void setOthersAsNotReady(IListener listener) {
+                synchronized (messageListeners) {
+                    messageListeners.values().stream().filter(messageListener -> !messageListener.getListenerAdapter().equals(listener)).forEach(messageListener -> {
+                        messageListener.ready(false);
+                    });
+                }
+            }
+        };
+
         synchronized (messageListeners) {
             parents.stream().forEach(predecessor -> {
                         Map address = (Map) predecessor.get("address");
                         String host = (String) address.get("host");
-                        Integer port = (Integer) address.get("port");
+                        String port = address.get("port")+"";
                         String type = (String) predecessor.get("type");
                         String originNodeName = (String) predecessor.get("nodeName");
                         if (type.equals("Add")) {
-                            Listener zmqListener = new Listener(host, String.valueOf(port), commConfig.getEncodingType(), nodeName, errorHandler);
+                            Listener zmqListener = new Listener(host, String.valueOf(port), commConfig.getEncodingType(), nodeName, readyUpdater, errorHandler);
                             MessageListener listener = new MessageListener(commConfig, zmqListener, originNodeName);
                             listener.register(this);
                             messageListeners.put(host + port, listener);
@@ -78,11 +90,10 @@ public class StreamingManager implements IMessageListener {
                         }
                         if (type.equals("Del")) {
                             MessageListener listener = messageListeners.remove(host + port);
-                            if (listeningToMessages) {
+                            if (listeningToMessages && listener != null) {
                                 listener.close(false);
                             }
                         }
-
                     }
             );
         }
@@ -135,15 +146,15 @@ public class StreamingManager implements IMessageListener {
                 messageListeners.values().stream().forEach(listener -> {
                     listener.close(force);
                 });
-                messageListeners.clear();
+                clearListeners();
             }
             listeningToMessages = false;
             registeredListeners = new ArrayList<>();
-            if (messageProducer != null) {
-                messageProducer.close(force);
-            }
-            messageProducer = null;
         }
+        if (messageProducer != null) {
+            messageProducer.close(force);
+        }
+        messageProducer = null;
     }
 
     public void clearListeners() {

@@ -1,13 +1,11 @@
 package hkube.communication.streaming;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class MessageQueue {
     String sourceName;
     Map<String, ConsumerStats> consumersMap = new HashMap();
+    Map<String, ArrayDeque<Long>> queueDurationCache = new HashMap();
     List<Message> queue = new ArrayList();
     int memorySize = 0;
     Double maxSize;
@@ -28,6 +26,7 @@ public class MessageQueue {
         this.maxSize = maxSize;
         consumers.stream().forEach(consumer -> {
             consumersMap.put(consumer, new ConsumerStats());
+            queueDurationCache.put(consumer, new ArrayDeque<>());
         });
     }
 
@@ -69,6 +68,10 @@ public class MessageQueue {
 
             }
             stats.sent += 1;
+            Long queueTime = System.currentTimeMillis() - msg.produceTime;
+            synchronized (queueDurationCache) {
+                queueDurationCache.get(consumer).add(queueTime);
+            }
             return msg;
         }
         return null;
@@ -81,7 +84,7 @@ public class MessageQueue {
                 queue.remove(0);
                 memorySize -= msg.data.length;
                 consumersMap.values().stream().forEach(currentStats -> {
-                    if(currentStats.index != 0) {
+                    if (currentStats.index != 0) {
                         currentStats.index--;
                     }
                 });
@@ -105,6 +108,17 @@ public class MessageQueue {
     public int getInQueue(String consumer) {
         ConsumerStats stats = consumersMap.get(consumer);
         return stats.added - stats.sent - stats.dropped;
+    }
+
+    public ArrayDeque resetQueueTimeDurations(String consumer) {
+        ArrayDeque durations;
+        synchronized (queueDurationCache) {
+
+            durations = queueDurationCache.get(consumer);
+            queueDurationCache.put(consumer, new ArrayDeque<>());
+        }
+        return durations;
+
     }
 
     public int getInQueue() {

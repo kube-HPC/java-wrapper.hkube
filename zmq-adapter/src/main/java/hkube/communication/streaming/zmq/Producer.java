@@ -17,13 +17,14 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMsg;
 
+import static hkube.communication.streaming.zmq.Signals.*;
+
 public class Producer implements IProducer {
 
-    private static final int HEARTBEAT_LIVENESS = 3; // 3-5 is reasonable
-    private static final int HEARTBEAT_INTERVAL = 1000; // msecs
-
-    private static final byte[] PPP_READY = {1}; // Signals worker is ready
-    private static final byte[] PPP_HEARTBEAT = {2}; // Signals worker
+    private static final int HEARTBEAT_INTERVAL = 10000; // msecs
+    private static final int EXPIRY_INTERVAL = 15000;
+    private static final int CYCLE_LENGTH_MS = 1000;
+    private static final int PURGE_INTERVAL = 5000;
     private String port = null;
     private List<IResponseAccumulator> responseAccumulators = new ArrayList<>();
     private MessageQueue queue;
@@ -35,6 +36,7 @@ public class Producer implements IProducer {
     ICommandSender errorHandler;
     ZMQ.Socket backend;
     Map<String, Date> sent = new HashMap();
+
 
     public Producer(String name, String port, List<String> consumers, String encoding, double maxBufferSize, ICommandSender errorHandler) {
         this.port = port;
@@ -56,8 +58,7 @@ public class Producer implements IProducer {
 
         public Worker(ZFrame address) {
             this.address = address;
-            this.expiry = System.currentTimeMillis() + HEARTBEAT_INTERVAL
-                    * HEARTBEAT_LIVENESS;
+            this.expiry = System.currentTimeMillis() + EXPIRY_INTERVAL;
         }
 
         @Override
@@ -80,15 +81,15 @@ public class Producer implements IProducer {
     }
 
     private static class WorkersPool {
-        private Map<String, Deque<Worker>> queues;
-        private static final ZFrame heartbeatFrame = new ZFrame(PPP_HEARTBEAT);
+        private Map<String, List<Worker>> queues;
+        private static final ZFrame heartbeatFrame = new ZFrame(PPP_HEARTBEAT.toBytes());
         private long heartbeatAt = System.currentTimeMillis()
                 + HEARTBEAT_INTERVAL;
 
         public WorkersPool(List<String> consumers) {
             queues = new HashMap<>();
             consumers.stream().forEach(consumer -> {
-                queues.put(consumer, new ArrayDeque<Worker>());
+                queues.put(consumer, new ArrayList<Worker>());
             });
 
         }
@@ -97,23 +98,37 @@ public class Producer implements IProducer {
          * Worker is ready, remove if on list and move to end
          */
         public synchronized void workerReady(Worker worker, String consumer) {
-            Deque<Worker> workers = queues.get(consumer);
-            if (workers.remove(worker)) {
-                System.out.printf("I:    %s is alive, waiting\n",
-                        worker.address.toString());
+            List<Worker> workers = queues.get(consumer);
+            if (!workers.contains(worker)) {
+                workers.add(worker);
             }
-            workers.offerLast(worker);
         }
 
         /**
-         * Return next available worker address
+         * Return next available worker addressList
          */
         public synchronized ZFrame next(String consumerName) {
-            Deque<Worker> workers = queues.get(consumerName);
+            List<Worker> workers = queues.get(consumerName);
             if (workers != null && workers.size() > 0) {
-                return workers.pollFirst().address;
+                int index = new Random().nextInt(workers.size());
+                return workers.remove(index).address;
             }
             return null;
+        }
+
+        public synchronized boolean hasNext(String consumerName) {
+            List<Worker> workers = queues.get(consumerName);
+            return (workers != null && workers.size() > 0);
+        }
+
+        public synchronized void remove(String consumerName, ZFrame address) {
+            List<Worker> workers = queues.get(consumerName);
+            if (workers != null && workers.size() > 0) {
+                Optional<Worker> toBeRemoved = workers.stream().filter(worker -> Arrays.equals(worker.address.getData(), address.getData())).findFirst();
+                if (toBeRemoved.isPresent()) {
+                    workers.remove(toBeRemoved.get());
+                }
+            }
         }
 
         /**
@@ -121,15 +136,16 @@ public class Producer implements IProducer {
          */
         public synchronized void sendHeartbeats(Socket backend) {
             // Send heartbeats to idle workers if it's time
-            queues.values().stream().forEach(workers -> {
-                if (System.currentTimeMillis() >= heartbeatAt) {
+            if (System.currentTimeMillis() >= heartbeatAt) {
+                queues.values().stream().forEach(workers -> {
+
                     for (Worker worker : workers) {
                         worker.address.sendAndKeep(backend, ZMQ.SNDMORE);
                         heartbeatFrame.sendAndKeep(backend);
                     }
                     heartbeatAt = System.currentTimeMillis() + HEARTBEAT_INTERVAL;
-                }
-            });
+                });
+            }
         }
 
         /**
@@ -138,10 +154,8 @@ public class Producer implements IProducer {
          */
         public synchronized void purge() {
             queues.values().stream().forEach(workers -> {
-                for (Worker w = workers.peekFirst(); w != null
-                        && w.expiry < System.currentTimeMillis(); w = workers
-                        .peekFirst()) {
-                    workers.pollFirst().address.destroy();
+                while (workers.size() > 0 && workers.get(0).expiry < System.currentTimeMillis()) {
+                    workers.remove(0).address.destroy();
                 }
             });
         }
@@ -156,6 +170,7 @@ public class Producer implements IProducer {
     }
 
     public void produce(Message msg) {
+        msg.setProduceTime(System.currentTimeMillis());
         queue.push(msg);
     }
 
@@ -163,6 +178,8 @@ public class Producer implements IProducer {
         // Prepare our context and sockets
 
         Thread thread = new Thread(new Runnable() {
+            private long nextPurgeTime = new Date().getTime() + PURGE_INTERVAL;
+
             @Override
             public void run() {
                 try {
@@ -175,7 +192,7 @@ public class Producer implements IProducer {
                         ZMQ.Poller items = new ZMQ.Poller(consumers.size());
                         items.register(backend, ZMQ.Poller.POLLIN);
                         try {
-                            items.poll(HEARTBEAT_INTERVAL);
+                            items.poll(CYCLE_LENGTH_MS);
                         } catch (Exception exe) {
                             if (!active) {
                                 break;
@@ -197,18 +214,26 @@ public class Producer implements IProducer {
 
                                 // Validate control message, or return reply to client
 
-                                ZFrame frame = msg.pop();
-                                ZFrame consumerNameFrame = msg.pop();
-                                String consumerName = (String) encodingManager.decodeNoHeader(consumerNameFrame.getData());
-                                workers.workerReady(new Worker(addressFrame), consumerName);
-                                byte[] data = frame.getData();
-                                if (!(Arrays.equals(data, PPP_HEARTBEAT) || Arrays
-                                        .equals(frame.getData(), PPP_READY))) {
+                                Signals signal = Signals.getByBytes(msg.pop().getData());
+                                String consumerName = (String) encodingManager.decodeNoHeader(msg.pop().getData());
+
+
+                                if (((!sent.keySet().contains(address)) && (signal == PPP_INIT ||
+                                        signal == PPP_READY || signal == PPP_HEARTBEAT)) || signal == PPP_DONE) {
+                                    workers.workerReady(new Worker(addressFrame), consumerName);
+                                }
+                                if (signal == PPP_DONE_DISCONNECT || signal == PPP_NOT_READY) {
+                                    workers.remove(consumerName, addressFrame);
+                                }
+                                if (signal == PPP_DONE || signal == PPP_DONE_DISCONNECT) {
+                                    byte[] data = msg.pop().getData();
                                     long duration = new Date().getTime() - sent.get(address).getTime();
+                                    sent.remove(address);
                                     responseAccumulators.stream().forEach(responseAccumlator -> {
                                         responseAccumlator.onResponse(data, consumerName, Long.valueOf(duration));
                                     });
                                 }
+
                                 msg.destroy();
                                 workers.sendHeartbeats(backend);
                                 workers.purge();
@@ -219,15 +244,17 @@ public class Producer implements IProducer {
                             }
                         }
                         consumers.stream().forEach(consumerName -> {
-                            ZFrame frame = workers.next(consumerName);
-                            if (frame != null) {
-                                String address = Base64.getEncoder().encodeToString(frame.getData());
+                            if (workers.hasNext(consumerName)) {
                                 Message message = queue.pop(consumerName);
                                 if (message != null) {
                                     try {
+                                        ZFrame frame = workers.next(consumerName);
+                                        String address = Base64.getEncoder().encodeToString(frame.getData());
+                                        frame.sendAndDestroy(backend, ZMQ.SNDMORE);
+                                        frame = new ZFrame(PPP_MSG.toBytes());
                                         frame.sendAndDestroy(backend, ZMQ.SNDMORE);
                                         Flow flow = message.getFlow().getRestOfFlow(name);
-                                        byte[] bytes = encodingManager.encodeNoHeader(flow);
+                                        byte[] bytes = encodingManager.encodeNoHeader(flow.asList());
                                         frame = new ZFrame(bytes);
                                         frame.sendAndDestroy(backend, ZMQ.SNDMORE);
                                         bytes = message.getHeader();
@@ -237,17 +264,20 @@ public class Producer implements IProducer {
                                         frame = new ZFrame(bytes);
                                         frame.sendAndDestroy(backend, 0);
                                         sent.put(address, new Date());
-                                    }catch (Exception exe){
-                                        if(active){
+                                    } catch (Exception exe) {
+                                        if (active) {
                                             throw exe;
                                         }
                                     }
                                 }
                             }
                         });
+                        if (new Date().getTime() > nextPurgeTime) {
+                            nextPurgeTime = new Date().getTime() + PURGE_INTERVAL;
+                            workers.purge();
+                        }
                     }
                     workers.close();
-                    context.destroy();
                 } catch (Exception exc) {
                     exc.printStackTrace(System.out);
                     Map<String, String> res = new HashMap<>();
@@ -270,6 +300,7 @@ public class Producer implements IProducer {
                 e.printStackTrace();
             }
         }
+        System.out.println("Stop listening on " + port);
         active = false;
         backend.close();
     }
@@ -279,6 +310,10 @@ public class Producer implements IProducer {
         return queue.getInQueue(consumer);
     }
 
+    @Override
+    public ArrayDeque resetQueueTimeDurations(String consumer){
+        return  queue.resetQueueTimeDurations(consumer);
+    }
     @Override
     public int getQueueSize() {
         return queue.getInQueue();
@@ -293,6 +328,5 @@ public class Producer implements IProducer {
     public int getDropped(String consumer) {
         return queue.getDropped(consumer);
     }
-
 
 }
