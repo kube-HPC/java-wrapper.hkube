@@ -118,6 +118,21 @@ public class StreamingManager implements IMessageListener {
         synchronized (messageListeners) {
             messageListeners.values().stream().forEach(messageListener -> messageListener.start());
         }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (listeningToMessages == true) {
+                    synchronized (messageListeners) {
+                        messageListeners.values().stream().forEach(messageListener -> messageListener.fetch());
+                    }
+                    try {
+                        Thread.sleep(5);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }).start();
     }
 
 
