@@ -13,6 +13,8 @@ public class Consts {
     public final static String startStoredSubPipeline = "startStoredSubPipeline";
     public final static String startRawSubPipeline = "startRawSubPipeline";
     public final static String input = "input";
+    public final static String storageInput = "storageInput";
+    public final static String storage = "storage";
     public final static String resultAsRaw = "resultAsRaw";
     public final static String algorithmName = "algorithmName";
     public final static String subPipeline = "subPipeline";

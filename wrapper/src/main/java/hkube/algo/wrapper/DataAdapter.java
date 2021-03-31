@@ -37,6 +37,25 @@ public class DataAdapter {
         storageProxy = new StorageProxy(taskStorage);
     }
 
+    public Map setAlgoData(List input, String jobId) {
+        Map result = new HashMap();
+        input.stream().forEach(inputValue -> {
+            HeaderContentPair content = encode(inputValue, config.storageConfig.getEncodingType());
+            Random rand = new Random(System.nanoTime());
+            String identity = String.format(
+                    "%04X-%04X", rand.nextInt(0x10000), rand.nextInt(0x10000)
+            );
+            taskStorage.put(jobId, identity, content);
+            Map wrappedStorageInfo = new HashMap();
+            Map storageInfo = new HashMap();
+            String fullPath = new StorageFactory(config.storageConfig).getTaskStorage().createFullPath(jobId, identity);
+            storageInfo.put("path", fullPath);
+            storageInfo.put("size", content.getContent().length);
+            wrappedStorageInfo.put("storageInfo", storageInfo);
+            result.put(identity, wrappedStorageInfo);
+        });
+        return result;
+    }
 
     public Collection placeData(Map args) {
         Boolean useCache = (Boolean) args.get("useCache");
@@ -250,7 +269,7 @@ public class DataAdapter {
         return encodedBytes;
     }
 
-    Map getStoringInfo(WrapperConfig config, String jobId, String taskId, Map metadata, int size) {
+    Map getStoringInfo(String jobId, String taskId, Map metadata, int size) {
         Map wrappedResult = new HashMap();
 
         Map storageInfo = new HashMap();

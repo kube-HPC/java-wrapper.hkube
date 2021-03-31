@@ -1,6 +1,7 @@
 package hkube.algo;
 
 import hkube.algo.wrapper.DataAdapter;
+import hkube.algo.wrapper.IContext;
 import hkube.algo.wrapper.StreamingManager;
 import hkube.api.IHKubeAPI;
 import hkube.api.INode;
@@ -12,6 +13,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
     private static final Logger logger = LogManager.getLogger();
@@ -21,11 +23,13 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
     StreamingManager streamingManager;
 
     DataAdapter dataAdapter;
+    IContext context;
 
-    public HKubeAPIImpl(ICommandSender sender, DataAdapter dataAdapter, StreamingManager streamingManager) {
+    public HKubeAPIImpl(ICommandSender sender, IContext context, DataAdapter dataAdapter, StreamingManager streamingManager) {
         this.dataAdapter = dataAdapter;
         this.commandSender = sender;
         this.streamingManager = streamingManager;
+        this.context = context;
         sender.addResponseListener(this);
     }
 
@@ -36,7 +40,10 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
         Map data = new HashMap();
         data.put(Consts.execId, executionId);
         data.put(Consts.algorithmName, name);
-        data.put(Consts.input, input);
+        Map<String, Map> storage = dataAdapter.setAlgoData(input, context.getJobId());
+        List storageInput = storage.keySet().stream().map(dataIdentifier -> "$$" + dataIdentifier).collect(Collectors.toList());
+        data.put(Consts.storage, storage);
+        data.put(Consts.storageInput, storageInput);
         data.put(Consts.resultAsRaw, resultAsRaw);
         commandSender.sendMessage(Consts.startAlgorithmExecution, data, false);
         return future;
@@ -140,34 +147,34 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
         String[] executionCommands = {"algorithmExecutionDone", "algorithmExecutionError"};
         String[] subPipeCommands = {"subPipelineDone",
                 "subPipelineError", "subPipelineStopped"};
-        logger.debug("got command" + command) ;
+        logger.debug("got command" + command);
         if (data != null) {
             logger.debug(new PrintUtil().getAsJsonStr(data));
         } else {
             logger.debug("data null");
         }
         if (Arrays.asList(executionCommands).contains(command)) {
-            String executionId = (String) ((Map)data).get("execId");
+            String executionId = (String) ((Map) data).get("execId");
             if (!isDebug) {
-                Map results = (Map) ((Map)data).get("response");
+                Map results = (Map) ((Map) data).get("response");
                 Object res = dataAdapter.getData(results, null);
-                ((Map)data).put("response", res);
+                ((Map) data).put("response", res);
             }
-            executions.get(executionId).setResult(((Map)data));
+            executions.get(executionId).setResult(((Map) data));
         }
         if (Arrays.asList(subPipeCommands).contains(command)) {
-            String executionId = (String) ((Map)data).get("subPipelineId");
+            String executionId = (String) ((Map) data).get("subPipelineId");
             //Support getting
             if (!isDebug) {
-                Map results = (Map) ((Map)data).get("response");
+                Map results = (Map) ((Map) data).get("response");
                 Object res = "No results";
                 if (results != null) {
                     res = dataAdapter.getData(results, null);
 
                 }
-                ((Map)data).put("response", res);
+                ((Map) data).put("response", res);
             }
-            executions.get(executionId).setResult(((Map)data));
+            executions.get(executionId).setResult(((Map) data));
         }
         logger.debug("Execution result" + data);
     }
@@ -177,15 +184,17 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
     }
 
     public void startMessageListening() {
-       streamingManager.startMessageListening();
+        streamingManager.startMessageListening();
     }
 
     public void sendMessage(Object msg, String flowName) {
         streamingManager.sendMessage(msg, flowName);
     }
+
     public void sendMessage(Object msg) {
         streamingManager.sendMessage(msg, null);
     }
+
     public void stopStreaming(boolean force) {
         streamingManager.stopStreaming(force);
     }
