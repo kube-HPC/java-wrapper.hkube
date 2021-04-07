@@ -1,10 +1,5 @@
 package hkube.communication.streaming.zmq;
 
-/**
- * Paranoid Pirate queue
- *
- * @author Arkadiusz Orzechowski <aorzecho@gmail.com>
- */
 
 import java.util.*;
 
@@ -14,17 +9,14 @@ import hkube.encoding.EncodingManager;
 import org.zeromq.ZContext;
 import org.zeromq.ZFrame;
 import org.zeromq.ZMQ;
-import org.zeromq.ZMQ.Socket;
 import org.zeromq.ZMsg;
 
 import static hkube.communication.streaming.zmq.Signals.*;
 
 public class Producer implements IProducer {
 
-    private static final int HEARTBEAT_INTERVAL = 10000; // msecs
     private static final int EXPIRY_INTERVAL = 15000;
     private static final int CYCLE_LENGTH_MS = 1;
-    private static final int PURGE_INTERVAL = 5000;
     private String port = null;
     private List<IResponseAccumulator> responseAccumulators = new ArrayList<>();
     private MessageQueue queue;
@@ -90,8 +82,6 @@ public class Producer implements IProducer {
         // Prepare our context and sockets
 
         Thread thread = new Thread(new Runnable() {
-            private long nextPurgeTime = new Date().getTime() + PURGE_INTERVAL;
-
             @Override
             public void run() {
                 try {
@@ -126,10 +116,9 @@ public class Producer implements IProducer {
                                 // Validate control message, or return reply to client
 
                                 Signals signal = Signals.getByBytes(msg.pop().getData());
-                                System.out.println("Signal in producer is " + signal.name());
                                 String consumerName = (String) encodingManager.decodeNoHeader(msg.pop().getData());
-                                addressFrame.sendAndDestroy(backend, ZMQ.SNDMORE);
                                 if (signal == PPP_READY) {
+                                    addressFrame.sendAndDestroy(backend, ZMQ.SNDMORE);
                                     Message message = queue.pop(consumerName);
                                     if (message != null) {
                                         try {
@@ -151,9 +140,9 @@ public class Producer implements IProducer {
                                                 throw exe;
                                             }
                                         }
-                                    }else{
+                                    } else {
                                         ZFrame frame = new ZFrame(PPP_NO_MSG.toBytes());
-                                        frame.sendAndDestroy(backend,0);
+                                        frame.sendAndDestroy(backend, 0);
                                     }
                                 }
                                 if (signal == PPP_DONE) {
@@ -168,8 +157,12 @@ public class Producer implements IProducer {
                                     } else {
                                         System.out.println(address + " is missing");
                                     }
+
+//                                    ZFrame frame = new ZFrame(PPP_NO_MSG.toBytes());
+//                                    frame.sendAndDestroy(backend, 0);
                                 }
                                 msg.destroy();
+
                             } catch (Exception exe) {
                                 if (!active) {
                                     break;

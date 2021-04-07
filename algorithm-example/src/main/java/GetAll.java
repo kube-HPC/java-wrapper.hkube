@@ -73,8 +73,8 @@ public class GetAll implements IAlgorithm {
             System.out.println("Tracing is " + traceString);
             System.out.println("handling " + ((Map) msg).get("id") + " on " + traceString);
             addToOrign(traceMap, traceString);
-            addInstaceToOrign(traceString, (String) ((Map) msg).get("id"));
-            addToTimeStats(traceString,  Long.valueOf( ""+((Map) msg).get("time")));
+            addInstaceToOrign(traceString, "" + ((Map) msg).get("id"));
+            addToTimeStats(traceString, Long.valueOf("" + ((Map) msg).get("time")));
         });
 
         hkubeAPI.startMessageListening();
@@ -92,7 +92,7 @@ public class GetAll implements IAlgorithm {
 
                         Integer c = 1;
                         for (; c < 100000; c++) {
-                            if (!entrty.getValue().contains(c)) {
+                            if (!entrty.getValue().contains(c+"")) {
                                 break;
                             }
                         }

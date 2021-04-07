@@ -1,10 +1,12 @@
 package hkube.communication.streaming.zmq;
 
+import java.text.DateFormat;
 import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 
+import com.fasterxml.jackson.databind.util.StdDateFormat;
 import hkube.algo.ICommandSender;
 import hkube.communication.streaming.Flow;
 import hkube.communication.streaming.IListener;
@@ -20,6 +22,7 @@ import hkube.communication.streaming.IMessageHandler;
 import static hkube.communication.streaming.zmq.Signals.*;
 
 public class Listener implements IListener {
+    private static final int CYCLE_LENGTH_MS = 1;
     String remoteHost;
     String remotePort;
     IMessageHandler messageHandler;
@@ -49,13 +52,12 @@ public class Listener implements IListener {
     ZMQ.Poller poller;
     private static final Logger logger = LogManager.getLogger();
 
-    public Listener(String remoteHost, String remotePort, String encoding, String name, IReadyUpdater readyUpdater, ICommandSender errorHandler) {
+    public Listener(String remoteHost, String remotePort, String encoding, String name, ICommandSender errorHandler) {
         this.remoteHost = remoteHost;
         this.remotePort = remotePort;
         this.errorHandler = errorHandler;
         this.encodingManager = new EncodingManager(encoding);
         this.name = name;
-        this.readyUpdater = readyUpdater;
         id = remoteHost + remotePort;
         me = this;
     }
@@ -89,9 +91,9 @@ public class Listener implements IListener {
         worker.connect("tcp://" + remoteHost + ":" + remotePort);
 
         //  Tell queue we're ready for work
-        System.out.println("I: worker ready\n");
+        System.out.println(identity + " connected\n");
         this.worker = worker;
-        send(PPP_READY, null);
+//        send(PPP_READY, null);
         poller = new ZMQ.Poller(1);
         poller.register(worker, Poller.POLLIN);
         lastReceiveTime = new Date().getTime();
@@ -99,8 +101,9 @@ public class Listener implements IListener {
 
     public void fetch() {
 
-        if (!active){
+        if (!active && stillWorking) {
             worker.close();
+            stillWorking = false;
             return;
         }
         send(PPP_READY, null);
@@ -117,7 +120,6 @@ public class Listener implements IListener {
             if (zmqMsg == null) {
                 System.out.print("Got null frame");
             }
-
             //  To test the robustness of the queue implementation we
             //  simulate various typical problems, such as the worker
             //  crashing, or running very slowly. We do this after a few
@@ -125,7 +127,6 @@ public class Listener implements IListener {
             //  first:
             ZFrame signalFrame = zmqMsg.pop();
             if (Signals.getByBytes(signalFrame.getData()) == PPP_MSG) {
-                System.out.println("got message");
                 ZFrame frame = zmqMsg.pop();
                 byte[] flowBytes = frame.getData();
                 frame = zmqMsg.pop();
@@ -137,13 +138,9 @@ public class Listener implements IListener {
                 Message msg = new Message(data, header, flow);
                 byte[] response = messageHandler.onMessage(msg);
                 send(PPP_DONE, response);
-            } else {
-                try {
-                    Thread.sleep(2);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
             }
+        } else {
+            System.out.println("Nothing on poll");
         }
     }
 
@@ -174,21 +171,15 @@ public class Listener implements IListener {
         lastSentTime = new Date().getTime();
     }
 
-    boolean sendIsReady() {
-        if (isReady != isReadySentValue) {
-            if (isReady) {
-                send(PPP_READY, null);
-            } else {
-                send(PPP_NO_MSG, null);
-            }
-            isReadySentValue = isReady;
-            return true;
-        }
-        return false;
-    }
-
     public void close(boolean forceClose) {
         active = false;
+        while (stillWorking) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
 

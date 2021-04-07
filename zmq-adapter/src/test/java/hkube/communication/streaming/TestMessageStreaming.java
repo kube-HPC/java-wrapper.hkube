@@ -3,7 +3,6 @@ package hkube.communication.streaming;
 import hkube.algo.CommandResponseListener;
 import hkube.algo.ICommandSender;
 import hkube.communication.CommConfig;
-import hkube.communication.streaming.zmq.IReadyUpdater;
 import hkube.communication.streaming.zmq.Listener;
 import hkube.communication.streaming.zmq.Producer;
 import org.json.JSONException;
@@ -64,17 +63,7 @@ public class TestMessageStreaming {
             }
         };
         msgProducer.registerStatisticsListener(statsListener);
-        IListener listener = new Listener("localhost", "4004", "msgpack", "B", new IReadyUpdater() {
-            @Override
-            public void setOthersAsReady(IListener l) {
-
-            }
-
-            @Override
-            public void setOthersAsNotReady(IListener l) {
-
-            }
-        }, handler);
+        IListener listener = new Listener("localhost", "4004", "msgpack", "B", handler);
         MessageListener msgListener = new MessageListener(conf, listener, "A");
         msgListener.register(new IMessageListener() {
             @Override

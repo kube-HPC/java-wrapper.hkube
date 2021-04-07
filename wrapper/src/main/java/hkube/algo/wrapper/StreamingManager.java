@@ -52,25 +52,7 @@ public class StreamingManager implements IMessageListener {
 
 
     void setupStreamingListeners(List<Map> parents, String nodeName) {
-        IReadyUpdater readyUpdater = new IReadyUpdater() {
-            @Override
-            public void setOthersAsReady(IListener listener) {
-                synchronized (messageListeners) {
-                    messageListeners.values().stream().filter(messageListener -> !messageListener.getListenerAdapter().equals(listener)).forEach(messageListener -> {
-                        messageListener.ready(true);
-                    });
-                }
-            }
 
-            @Override
-            public void setOthersAsNotReady(IListener listener) {
-                synchronized (messageListeners) {
-                    messageListeners.values().stream().filter(messageListener -> !messageListener.getListenerAdapter().equals(listener)).forEach(messageListener -> {
-                        messageListener.ready(false);
-                    });
-                }
-            }
-        };
 
         synchronized (messageListeners) {
             parents.stream().forEach(predecessor -> {
@@ -80,7 +62,7 @@ public class StreamingManager implements IMessageListener {
                         String type = (String) predecessor.get("type");
                         String originNodeName = (String) predecessor.get("nodeName");
                         if (type.equals("Add")) {
-                            Listener zmqListener = new Listener(host, String.valueOf(port), commConfig.getEncodingType(), nodeName, readyUpdater, errorHandler);
+                            Listener zmqListener = new Listener(host, port, commConfig.getEncodingType(), nodeName,  errorHandler);
                             MessageListener listener = new MessageListener(commConfig, zmqListener, originNodeName);
                             listener.register(this);
                             messageListeners.put(host + port, listener);
@@ -89,10 +71,11 @@ public class StreamingManager implements IMessageListener {
                             }
                         }
                         if (type.equals("Del")) {
-                            MessageListener listener = messageListeners.remove(host + port);
+                            MessageListener listener = messageListeners.get(host + port);
                             if (listeningToMessages && listener != null) {
                                 listener.close(false);
                             }
+                            messageListeners.remove(host + port);
                         }
                     }
             );
