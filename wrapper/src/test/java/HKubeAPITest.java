@@ -3,6 +3,7 @@ import hkube.algo.Consts;
 import hkube.algo.HKubeAPIImpl;
 import hkube.algo.ICommandSender;
 import hkube.algo.wrapper.DataAdapter;
+import hkube.algo.wrapper.IContext;
 import hkube.algo.wrapper.WrapperConfig;
 import hkube.api.INode;
 import hkube.communication.zmq.RequestFactory;
@@ -41,12 +42,17 @@ public class HKubeAPITest {
             public void addResponseListener(CommandResponseListener listener) {
                 this.listener = listener;
             }
+        }, new IContext() {
+            @Override
+            public String getJobId() {
+                return null;
+            }
         }, new DataAdapter(new WrapperConfig(), new RequestFactory()) {
             @Override
             public Object getData(Map single, String jobId) {
                 return single;
             }
-        },null);
+        }, null);
         Map result = api.startStoredPipeLine("pipeName", new HashMap());
         assert ((Map) result.get("response")).get("storedResult") == "5";
     }
@@ -76,7 +82,12 @@ public class HKubeAPITest {
             public void addResponseListener(CommandResponseListener listener) {
                 this.listener = listener;
             }
-        }, new DataAdapter(new WrapperConfig(), new RequestFactory()) {
+        }, new IContext() {
+            @Override
+            public String getJobId() {
+                return null;
+            }
+        } ,new DataAdapter(new WrapperConfig(), new RequestFactory()) {
             @Override
             public Object getData(Map single, String jobId) {
                 return single;
@@ -128,12 +139,17 @@ public class HKubeAPITest {
             public void addResponseListener(CommandResponseListener listener) {
                 this.listener = listener;
             }
+        }, new IContext() {
+            @Override
+            public String getJobId() {
+                return null;
+            }
         }, new DataAdapter(new WrapperConfig(), new RequestFactory()) {
             @Override
             public Object getData(Map single, String jobId) {
                 return single;
             }
-        },null);
+        }, null);
         Future rawResult = api.startRawSubPipeLineAsynch("pipeName", new INode[]{}, new HashMap(), null, null);
         Future algoReslut = api.startAlgorithmAsynch("algName", new ArrayList(), false);
         while (!rawResult.isDone()) Thread.sleep(200);

@@ -3,7 +3,6 @@ package hkube.communication.streaming;
 import hkube.algo.CommandResponseListener;
 import hkube.algo.ICommandSender;
 import hkube.communication.CommConfig;
-import hkube.communication.streaming.zmq.IReadyUpdater;
 import hkube.communication.streaming.zmq.Listener;
 import hkube.communication.streaming.zmq.Producer;
 import org.json.JSONException;
@@ -64,17 +63,7 @@ public class TestMessageStreaming {
             }
         };
         msgProducer.registerStatisticsListener(statsListener);
-        IListener listener = new Listener("localhost", "4004", "msgpack", "B", new IReadyUpdater() {
-            @Override
-            public void setOthersAsReady(IListener l) {
-
-            }
-
-            @Override
-            public void setOthersAsNotReady(IListener l) {
-
-            }
-        }, handler);
+        IListener listener = new Listener("localhost", "4004", "msgpack", "B", handler);
         MessageListener msgListener = new MessageListener(conf, listener, "A");
         msgListener.register(new IMessageListener() {
             @Override
@@ -91,6 +80,7 @@ public class TestMessageStreaming {
         HashMap myMap = new HashMap();
         myMap.put("field1", "value1");
         msgProducer.produce(flow, myMap);
+
         try {
             Thread.sleep(2000);
         } catch (InterruptedException e) {
@@ -103,6 +93,9 @@ public class TestMessageStreaming {
 
         assert allDurations[0] == 0;
         msgListener.start();
+        msgListener.fetch();
+        msgListener.fetch();
+
         try {
             Thread.sleep(3000);
         } catch (InterruptedException e) {
@@ -118,6 +111,7 @@ public class TestMessageStreaming {
         flowList = (List) flows.get("master");
         flow = new Flow(flowList);
         msgProducer.produce(flow, myMap);
+        msgListener.fetch();
         try {
             Thread.sleep(1000);
         } catch (InterruptedException e) {

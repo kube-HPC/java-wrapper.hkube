@@ -9,6 +9,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class HkubeAPI implements IAlgorithm {
@@ -36,7 +37,11 @@ public class HkubeAPI implements IAlgorithm {
 
 
 
-        Map stroedResult = hkubeAPI.startStoredPipeLine("bug", simpleInput);
+//        Map stroedResult = hkubeAPI.startStoredPipeLine("bug", simpleInput);
+        List ll = new ArrayList();
+        ll.add("shash");
+        ll.add("ff");
+        Map stroedResult = hkubeAPI.startAlgorithm("green-alg",ll,false);
 
 
 //        final String nodeName = "node1";

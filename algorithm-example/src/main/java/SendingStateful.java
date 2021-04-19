@@ -1,10 +1,7 @@
 import hkube.algo.wrapper.IAlgorithm;
 import hkube.api.IHKubeAPI;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class SendingStateful implements IAlgorithm {
     boolean active = false;
@@ -33,15 +30,14 @@ public class SendingStateful implements IAlgorithm {
 
                 if (active) {
                     Map msg = new HashMap();
-                    msg.put("trace", nodeName);
+                    List arrList = new ArrayList();
+                    arrList.add(nodeName);
+                    msg.put("trace", arrList);
                     msg.put("data", new byte[900]);
                     msg.put("id", ++sent);
                     msg.put("time", new Date().getTime());
                     hkubeAPI.sendMessage(msg, "analyze");
                     hkubeAPI.sendMessage(msg);
-                    if (c % 60 == 0) {
-
-                    }
                 }
             }
             i++;
@@ -69,6 +65,7 @@ public class SendingStateful implements IAlgorithm {
                 Thread.sleep( (Integer)sleepTime.get(1) * 1000);
                 active = false;
             }
+            Thread.sleep(1000);
 
         }
         Thread.sleep(120000);

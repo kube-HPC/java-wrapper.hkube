@@ -2,7 +2,6 @@ package hkube.communication.streaming;
 
 import hkube.algo.CommandResponseListener;
 import hkube.algo.ICommandSender;
-import hkube.communication.streaming.zmq.IReadyUpdater;
 import hkube.communication.streaming.zmq.Listener;
 import hkube.communication.streaming.zmq.Producer;
 import org.json.JSONException;
@@ -60,17 +59,7 @@ public class TestStreaming {
             }
         });
         producer.registerResponseAccumulator(accumulator);
-        Listener listener = new Listener("localhost", "4004", "msgpack", "B",new IReadyUpdater(){
-            @Override
-            public void setOthersAsReady(IListener l) {
-
-            }
-
-            @Override
-            public void setOthersAsNotReady(IListener l) {
-
-            }
-        },new ICommandSender() {
+        Listener listener = new Listener("localhost", "4004", "msgpack", "B",new ICommandSender() {
             @Override
             public void sendMessage(String command, Object data, boolean isError) {
 
@@ -95,12 +84,14 @@ public class TestStreaming {
             e.printStackTrace();
         }
         listener.start();
+        listener.fetch();
         try {
             Thread.sleep(100);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
         producer.produce(msg);
+        listener.fetch();
         try {
             Thread.sleep(2000);
         } catch (InterruptedException e) {
@@ -112,6 +103,7 @@ public class TestStreaming {
         flow = new Flow(flowList);
         msg = new Message("Hello".getBytes(), "Header".getBytes(), flow);
         producer.produce(msg);
+        listener.fetch();
         try {
             Thread.sleep(2000);
         } catch (InterruptedException e) {
@@ -123,6 +115,7 @@ public class TestStreaming {
         flow = new Flow(flowList);
         msg = new Message("Hello".getBytes(), "Header".getBytes(), flow);
         producer.produce(msg);
+        listener.fetch();
         try {
             Thread.sleep(4000);
         } catch (InterruptedException e) {

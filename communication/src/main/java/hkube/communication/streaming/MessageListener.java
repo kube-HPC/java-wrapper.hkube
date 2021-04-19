@@ -55,6 +55,11 @@ public class MessageListener {
         listenerAdapter.start();
 
     }
+
+    public void fetch(){
+        listenerAdapter.fetch();
+    }
+
     public void close(boolean force) {
         listenerAdapter.close(false);
 

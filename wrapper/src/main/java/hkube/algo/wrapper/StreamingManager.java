@@ -52,25 +52,7 @@ public class StreamingManager implements IMessageListener {
 
 
     void setupStreamingListeners(List<Map> parents, String nodeName) {
-        IReadyUpdater readyUpdater = new IReadyUpdater() {
-            @Override
-            public void setOthersAsReady(IListener listener) {
-                synchronized (messageListeners) {
-                    messageListeners.values().stream().filter(messageListener -> !messageListener.getListenerAdapter().equals(listener)).forEach(messageListener -> {
-                        messageListener.ready(true);
-                    });
-                }
-            }
 
-            @Override
-            public void setOthersAsNotReady(IListener listener) {
-                synchronized (messageListeners) {
-                    messageListeners.values().stream().filter(messageListener -> !messageListener.getListenerAdapter().equals(listener)).forEach(messageListener -> {
-                        messageListener.ready(false);
-                    });
-                }
-            }
-        };
 
         synchronized (messageListeners) {
             parents.stream().forEach(predecessor -> {
@@ -80,19 +62,19 @@ public class StreamingManager implements IMessageListener {
                         String type = (String) predecessor.get("type");
                         String originNodeName = (String) predecessor.get("nodeName");
                         if (type.equals("Add")) {
-                            Listener zmqListener = new Listener(host, String.valueOf(port), commConfig.getEncodingType(), nodeName, readyUpdater, errorHandler);
+                            Listener zmqListener = new Listener(host, port, commConfig.getEncodingType(), nodeName,  errorHandler);
                             MessageListener listener = new MessageListener(commConfig, zmqListener, originNodeName);
                             listener.register(this);
-                            messageListeners.put(host + port, listener);
                             if (listeningToMessages) {
                                 listener.start();
                             }
-                        }
+                            messageListeners.put(host + port, listener);                        }
                         if (type.equals("Del")) {
-                            MessageListener listener = messageListeners.remove(host + port);
+                            MessageListener listener = messageListeners.get(host + port);
                             if (listeningToMessages && listener != null) {
                                 listener.close(false);
                             }
+                            messageListeners.remove(host + port);
                         }
                     }
             );
@@ -118,6 +100,20 @@ public class StreamingManager implements IMessageListener {
         synchronized (messageListeners) {
             messageListeners.values().stream().forEach(messageListener -> messageListener.start());
         }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (listeningToMessages == true) {
+                    Map<String, MessageListener>  clonedMessageListeners = new HashMap(messageListeners);
+                        clonedMessageListeners.values().stream().forEach(messageListener -> messageListener.fetch());
+                    try {
+                        Thread.sleep(2);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }).start();
     }
 
 
@@ -147,8 +143,8 @@ public class StreamingManager implements IMessageListener {
                     listener.close(force);
                 });
                 clearListeners();
+                listeningToMessages = false;
             }
-            listeningToMessages = false;
             registeredListeners = new ArrayList<>();
         }
         if (messageProducer != null) {

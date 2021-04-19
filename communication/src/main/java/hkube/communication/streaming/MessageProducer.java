@@ -82,7 +82,7 @@ public class MessageProducer {
         public void onResponse(byte[] response, String origin, Long grossDuration) {
             Map decodedResponse = (Map) encoding.decodeNoHeader(response);
             responseCount.put(origin, responseCount.get(origin) + 1);
-            Double duration = (Double) decodedResponse.get("duration");
+            Double duration =( (Number) decodedResponse.get("duration")).doubleValue();
             ArrayDeque<Double> durations = (ArrayDeque<Double>) durationCache.get(origin);
             ArrayDeque<Long> grossDurations = grossDurationCache.get(origin);
             durations.add(duration);

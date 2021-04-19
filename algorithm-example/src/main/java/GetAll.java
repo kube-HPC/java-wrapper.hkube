@@ -3,6 +3,7 @@ import hkube.api.IHKubeAPI;
 import org.json.JSONObject;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class GetAll implements IAlgorithm {
     Map<String, List> allInstances = new HashMap();
@@ -24,7 +25,7 @@ public class GetAll implements IAlgorithm {
     }
 
 
-    void addInstaceToOrign(String trace, Integer id) {
+    void addInstaceToOrign(String trace, String id) {
         if (allInstances.containsKey(trace)) {
 
             allInstances.get(trace).add(id);
@@ -61,11 +62,19 @@ public class GetAll implements IAlgorithm {
         final String nodeName = (String) input.get("nodeName");
         hkubeAPI.registerInputListener((msg, origin) -> {
             addToOrign(dic, origin);
-            String trace =((Map) msg).get("trace") + nodeName;
-            System.out.println("handling " +((Map) msg).get("id") + " on " +trace);
-            addToOrign(traceMap, trace);
-            addInstaceToOrign(trace, (Integer) ((Map) msg).get("id"));
-            addToTimeStats(trace, (Long) ((Map) msg).get("time"));
+            List trace = (List) ((Map) msg).get("trace");
+            trace.add(nodeName);
+
+            AtomicReference<String> traceReference = new AtomicReference<>("");
+            trace.stream().forEach(s -> {
+                traceReference.set(traceReference.get() + s);
+            });
+            String traceString = traceReference.get();
+            System.out.println("Tracing is " + traceString);
+            System.out.println("handling " + ((Map) msg).get("id") + " on " + traceString);
+            addToOrign(traceMap, traceString);
+            addInstaceToOrign(traceString, "" + ((Map) msg).get("id"));
+            addToTimeStats(traceString, Long.valueOf("" + ((Map) msg).get("time")));
         });
 
         hkubeAPI.startMessageListening();
@@ -83,7 +92,7 @@ public class GetAll implements IAlgorithm {
 
                         Integer c = 1;
                         for (; c < 100000; c++) {
-                            if (!entrty.getValue().contains(c)) {
+                            if (!entrty.getValue().contains(c+"")) {
                                 break;
                             }
                         }

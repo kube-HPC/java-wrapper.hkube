@@ -1,0 +1,42 @@
+{
+  "analyze": [
+    {
+      "source": "A",
+      "next": [
+        "B"
+      ]
+    },
+    {
+      "source": "B",
+      "next": [
+        "C"
+      ]
+    },
+    {
+      "source": "C",
+      "next": [
+        "D"
+      ]
+    }
+  ],
+  "master": [
+    {
+      "source": "A",
+      "next": [
+        "C"
+      ]
+    },
+    {
+      "source": "C",
+      "next": [
+        "D"
+      ]
+    },
+    {
+      "source": "D",
+      "next": [
+        "E"
+      ]
+    }
+  ]
+}

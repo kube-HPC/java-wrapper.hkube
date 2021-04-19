@@ -27,7 +27,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 @ClientEndpoint
-public class Wrapper implements ICommandSender {
+public class Wrapper implements ICommandSender, IContext {
     private final WrapperConfig mConfig;
     private static boolean isDebugMode = false;
     Session userSession = null;
@@ -56,7 +56,7 @@ public class Wrapper implements ICommandSender {
         mConfig = config;
         dataAdapter = new DataAdapter(mConfig, new RequestFactory());
         streamingManager = new StreamingManager(this, config.commConfig);
-        hkubeAPI = new HKubeAPIImpl(this, dataAdapter, streamingManager);
+        hkubeAPI = new HKubeAPIImpl(this,this, dataAdapter, streamingManager);
         if (!isDebugMode) {
             zmqServer = new ZMQServer(mConfig.commConfig);
         } else {
@@ -194,7 +194,9 @@ public class Wrapper implements ICommandSender {
     private boolean isStreaming() {
         return (mArgs != null && mArgs.get("kind") != null && mArgs.get("kind").equals("stream"));
     }
-
+    public String getJobId(){
+        return (String) mArgs.get("jobId");
+    }
     private void onMessage(Map msgAsMap) {
         try {
             String command = (String) msgAsMap.get("command");
@@ -258,7 +260,7 @@ public class Wrapper implements ICommandSender {
                                 HeaderContentPair encodedData = dataAdapter.encode(res, mConfig.commConfig.getEncodingType());
                                 boolean dataAdded = dataServer.addTaskData(taskId, encodedData);
                                 int resEncodedSize = encodedData.getContent().length;
-                                Map resultStoringInfo = dataAdapter.getStoringInfo(mConfig, jobId, taskId, metaData, resEncodedSize);
+                                Map resultStoringInfo = dataAdapter.getStoringInfo( jobId, taskId, metaData, resEncodedSize);
                                 if (logger.isDebugEnabled()) {
                                     logger.debug("result storing data" + resultStoringInfo);
                                 }
