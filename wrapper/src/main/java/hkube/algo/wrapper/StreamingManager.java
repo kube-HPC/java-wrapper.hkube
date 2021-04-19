@@ -65,11 +65,10 @@ public class StreamingManager implements IMessageListener {
                             Listener zmqListener = new Listener(host, port, commConfig.getEncodingType(), nodeName,  errorHandler);
                             MessageListener listener = new MessageListener(commConfig, zmqListener, originNodeName);
                             listener.register(this);
-                            messageListeners.put(host + port, listener);
                             if (listeningToMessages) {
                                 listener.start();
                             }
-                        }
+                            messageListeners.put(host + port, listener);                        }
                         if (type.equals("Del")) {
                             MessageListener listener = messageListeners.get(host + port);
                             if (listeningToMessages && listener != null) {
@@ -105,11 +104,10 @@ public class StreamingManager implements IMessageListener {
             @Override
             public void run() {
                 while (listeningToMessages == true) {
-                    synchronized (messageListeners) {
-                        messageListeners.values().stream().forEach(messageListener -> messageListener.fetch());
-                    }
+                    Map<String, MessageListener>  clonedMessageListeners = new HashMap(messageListeners);
+                        clonedMessageListeners.values().stream().forEach(messageListener -> messageListener.fetch());
                     try {
-                        Thread.sleep(5);
+                        Thread.sleep(2);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -145,8 +143,8 @@ public class StreamingManager implements IMessageListener {
                     listener.close(force);
                 });
                 clearListeners();
+                listeningToMessages = false;
             }
-            listeningToMessages = false;
             registeredListeners = new ArrayList<>();
         }
         if (messageProducer != null) {

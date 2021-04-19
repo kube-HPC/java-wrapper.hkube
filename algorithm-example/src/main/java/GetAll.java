@@ -64,7 +64,7 @@ public class GetAll implements IAlgorithm {
             addToOrign(dic, origin);
             List trace = (List) ((Map) msg).get("trace");
             trace.add(nodeName);
-            System.out.println("NodeName:" + nodeName);
+
             AtomicReference<String> traceReference = new AtomicReference<>("");
             trace.stream().forEach(s -> {
                 traceReference.set(traceReference.get() + s);

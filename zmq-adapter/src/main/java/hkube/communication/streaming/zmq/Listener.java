@@ -101,46 +101,47 @@ public class Listener implements IListener {
 
     public void fetch() {
 
-        if (!active && stillWorking) {
+        if(active) {
+            send(PPP_READY, null);
+            int rc = poller.poll(POLL_TIMEOUT_MS);
+            if (rc == -1) {
+                System.out.print("Poll failed break loop");
+            } else if (poller.pollin(0)) {
+                //  Get message
+                //  - 3-part envelope + content -> request
+                //  - 1-part HEARTBEAT -> heartbeat
+                ZMsg zmqMsg;
+
+                zmqMsg = ZMsg.recvMsg(worker);
+                if (zmqMsg == null) {
+                    System.out.print("Got null frame");
+                }
+                //  To test the robustness of the queue implementation we
+                //  simulate various typical problems, such as the worker
+                //  crashing, or running very slowly. We do this after a few
+                //  cycles so that the architecture can get up and running
+                //  first:
+                ZFrame signalFrame = zmqMsg.pop();
+                if (Signals.getByBytes(signalFrame.getData()) == PPP_MSG) {
+                    ZFrame frame = zmqMsg.pop();
+                    byte[] flowBytes = frame.getData();
+                    frame = zmqMsg.pop();
+                    byte[] header = frame.getData();
+                    frame = zmqMsg.pop();
+                    byte[] data = frame.getData();
+                    List flowList = (List) encodingManager.decodeNoHeader(flowBytes);
+                    Flow flow = new Flow(flowList);
+                    Message msg = new Message(data, header, flow);
+                    byte[] response = messageHandler.onMessage(msg);
+                    send(PPP_DONE, response);
+                }
+            } else {
+                System.out.println("Nothing on poll");
+            }
+        }
+        else if(stillWorking){
             worker.close();
             stillWorking = false;
-            return;
-        }
-        send(PPP_READY, null);
-        int rc = poller.poll(POLL_TIMEOUT_MS);
-        if (rc == -1) {
-            System.out.print("Poll failed break loop");
-        } else if (poller.pollin(0)) {
-            //  Get message
-            //  - 3-part envelope + content -> request
-            //  - 1-part HEARTBEAT -> heartbeat
-            ZMsg zmqMsg;
-
-            zmqMsg = ZMsg.recvMsg(worker);
-            if (zmqMsg == null) {
-                System.out.print("Got null frame");
-            }
-            //  To test the robustness of the queue implementation we
-            //  simulate various typical problems, such as the worker
-            //  crashing, or running very slowly. We do this after a few
-            //  cycles so that the architecture can get up and running
-            //  first:
-            ZFrame signalFrame = zmqMsg.pop();
-            if (Signals.getByBytes(signalFrame.getData()) == PPP_MSG) {
-                ZFrame frame = zmqMsg.pop();
-                byte[] flowBytes = frame.getData();
-                frame = zmqMsg.pop();
-                byte[] header = frame.getData();
-                frame = zmqMsg.pop();
-                byte[] data = frame.getData();
-                List flowList = (List) encodingManager.decodeNoHeader(flowBytes);
-                Flow flow = new Flow(flowList);
-                Message msg = new Message(data, header, flow);
-                byte[] response = messageHandler.onMessage(msg);
-                send(PPP_DONE, response);
-            }
-        } else {
-            System.out.println("Nothing on poll");
         }
     }
 

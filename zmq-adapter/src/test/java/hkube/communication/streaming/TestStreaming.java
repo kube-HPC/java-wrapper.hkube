@@ -84,12 +84,14 @@ public class TestStreaming {
             e.printStackTrace();
         }
         listener.start();
+        listener.fetch();
         try {
             Thread.sleep(100);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
         producer.produce(msg);
+        listener.fetch();
         try {
             Thread.sleep(2000);
         } catch (InterruptedException e) {
@@ -101,6 +103,7 @@ public class TestStreaming {
         flow = new Flow(flowList);
         msg = new Message("Hello".getBytes(), "Header".getBytes(), flow);
         producer.produce(msg);
+        listener.fetch();
         try {
             Thread.sleep(2000);
         } catch (InterruptedException e) {
@@ -112,6 +115,7 @@ public class TestStreaming {
         flow = new Flow(flowList);
         msg = new Message("Hello".getBytes(), "Header".getBytes(), flow);
         producer.produce(msg);
+        listener.fetch();
         try {
             Thread.sleep(4000);
         } catch (InterruptedException e) {

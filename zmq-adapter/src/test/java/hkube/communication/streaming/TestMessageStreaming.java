@@ -80,6 +80,7 @@ public class TestMessageStreaming {
         HashMap myMap = new HashMap();
         myMap.put("field1", "value1");
         msgProducer.produce(flow, myMap);
+
         try {
             Thread.sleep(2000);
         } catch (InterruptedException e) {
@@ -92,6 +93,9 @@ public class TestMessageStreaming {
 
         assert allDurations[0] == 0;
         msgListener.start();
+        msgListener.fetch();
+        msgListener.fetch();
+
         try {
             Thread.sleep(3000);
         } catch (InterruptedException e) {
@@ -107,6 +111,7 @@ public class TestMessageStreaming {
         flowList = (List) flows.get("master");
         flow = new Flow(flowList);
         msgProducer.produce(flow, myMap);
+        msgListener.fetch();
         try {
             Thread.sleep(1000);
         } catch (InterruptedException e) {
