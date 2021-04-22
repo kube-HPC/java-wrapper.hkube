@@ -128,7 +128,7 @@ public class MessageProducer {
         if (printStatistics % 10 == 0) {
             {
                 Object json = new PrintUtil().toJSON(statistics);
-                System.out.print(json + "\n");
+                logger.info(json + "\n");
             }
         }
     }
