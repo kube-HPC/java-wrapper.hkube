@@ -52,7 +52,7 @@ public class HKubeAPITest {
             public Object getData(Map single, String jobId) {
                 return single;
             }
-        }, null);
+        }, null,false);
         Map result = api.startStoredPipeLine("pipeName", new HashMap());
         assert ((Map) result.get("response")).get("storedResult") == "5";
     }
@@ -92,7 +92,7 @@ public class HKubeAPITest {
             public Object getData(Map single, String jobId) {
                 return single;
             }
-        },null);
+        },null,false);
 
         Map result = api.startRawSubPipeLine("pipeName", new INode[]{}, new HashMap(), null, null);
         assert ((Map) result.get("response")).get("rawResult") == "2";
@@ -149,7 +149,7 @@ public class HKubeAPITest {
             public Object getData(Map single, String jobId) {
                 return single;
             }
-        }, null);
+        }, null, false);
         Future rawResult = api.startRawSubPipeLineAsynch("pipeName", new INode[]{}, new HashMap(), null, null);
         Future algoReslut = api.startAlgorithmAsynch("algName", new ArrayList(), false);
         while (!rawResult.isDone()) Thread.sleep(200);

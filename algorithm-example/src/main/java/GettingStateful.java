@@ -18,7 +18,9 @@ public class GettingStateful implements IAlgorithm {
             @Override
             public void onMessage(Object msg, String origin) {
                 System.out.print("Got message " + msg + " from " + origin);
+                hkubeAPI.sendMessage(msg);
             }
+
         });
         active = true;
         hkubeAPI.startMessageListening();
