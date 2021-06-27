@@ -6,6 +6,7 @@ import hkube.algo.wrapper.StreamingManager;
 import hkube.api.IHKubeAPI;
 import hkube.api.INode;
 import hkube.communication.streaming.IStreamingManagerMsgListener;
+import hkube.consts.messages.Outgoing;
 import hkube.utils.PrintUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -24,13 +25,15 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
 
     DataAdapter dataAdapter;
     IContext context;
+    boolean isDebug = false;
 
-    public HKubeAPIImpl(ICommandSender sender, IContext context, DataAdapter dataAdapter, StreamingManager streamingManager) {
+    public HKubeAPIImpl(ICommandSender sender, IContext context, DataAdapter dataAdapter, StreamingManager streamingManager, boolean isDebug) {
         this.dataAdapter = dataAdapter;
         this.commandSender = sender;
         this.streamingManager = streamingManager;
         this.context = context;
         sender.addResponseListener(this);
+        this.isDebug = isDebug;
     }
 
     @Override
@@ -188,11 +191,19 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
     }
 
     public void sendMessage(Object msg, String flowName) {
-        streamingManager.sendMessage(msg, flowName);
+        if (isDebug) {
+            Map data = new HashMap();
+            data.put("message", msg);
+            data.put("flowName", flowName);
+            data.put("sendMessageId", streamingManager.getCurrentSendMessageId());
+            commandSender.sendMessage(Outgoing.streamingOutMessage, data, false);
+        } else {
+            streamingManager.sendMessage(msg, flowName);
+        }
     }
 
     public void sendMessage(Object msg) {
-        streamingManager.sendMessage(msg, null);
+        sendMessage(msg, null);
     }
 
     public void stopStreaming(boolean force) {

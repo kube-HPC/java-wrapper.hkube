@@ -11,10 +11,12 @@ import hkube.communication.streaming.IStatisticsListener;
 import hkube.communication.streaming.Statistics;
 import hkube.communication.zmq.RequestFactory;
 import hkube.communication.zmq.ZMQServer;
+import hkube.consts.messages.Outgoing;
 import hkube.encoding.EncodingManager;
 import hkube.model.HeaderContentPair;
 import hkube.storage.StorageFactory;
 import hkube.storage.TaskStorage;
+import hkube.consts.messages.Incomming;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.glassfish.tyrus.client.ClientManager;
@@ -25,6 +27,7 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+
 
 @ClientEndpoint
 public class Wrapper implements ICommandSender, IContext {
@@ -49,14 +52,13 @@ public class Wrapper implements ICommandSender, IContext {
 
 
     private static final Logger logger = LogManager.getLogger();
-
     public Wrapper(IAlgorithm algorithm, WrapperConfig config) {
         System.out.println("IP is " + System.getenv("POD_IP"));
         Cache.init(config.commConfig.getMaxCacheSize());
         mConfig = config;
         dataAdapter = new DataAdapter(mConfig, new RequestFactory());
         streamingManager = new StreamingManager(this, config.commConfig);
-        hkubeAPI = new HKubeAPIImpl(this,this, dataAdapter, streamingManager);
+        hkubeAPI = new HKubeAPIImpl(this,this, dataAdapter, streamingManager,isDebugMode);
         if (!isDebugMode) {
             zmqServer = new ZMQServer(mConfig.commConfig);
         } else {
@@ -248,7 +250,7 @@ public class Wrapper implements ICommandSender, IContext {
                                 if (logger.isDebugEnabled()) {
                                     logger.debug("input data after decoding " + input);
                                 }
-                                logger.debug("Before running algorithm");
+                                logger.debug("fBefore running algorithm");
                                 Object res;
                                 res = mAlgorithm.Start(mArgs, hkubeAPI);
                                 logger.debug("After running algorithm");
@@ -324,9 +326,17 @@ public class Wrapper implements ICommandSender, IContext {
 
                             sendMessage("stopped", null, false);
                             break;
-                        case "serviceDiscoveryUpdate":
+                        case Incomming.serviceDiscoveryUpdate:
                             discoveryUpdate((List) data);
+                        case Incomming.streamingInMessage:
+                            String origin = (String)((Map)data).get("origin");
+                            Map msg = (Map) ((Map)data).get("payload");
+                            String sendMessageId = (String)((Map)data).get("sendMessageId");
 
+                            streamingManager.onMessage(msg,origin,sendMessageId);
+                            Map sendMessagIdMap = new HashMap();
+                            sendMessagIdMap.put("sendMessageId",sendMessageId);
+                            sendMessage(Outgoing.streamingInMessageDone,sendMessagIdMap,false);
                         default:
                             logger.info("got command: " + command);
 

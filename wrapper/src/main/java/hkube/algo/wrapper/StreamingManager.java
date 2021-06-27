@@ -58,17 +58,18 @@ public class StreamingManager implements IMessageListener {
             parents.stream().forEach(predecessor -> {
                         Map address = (Map) predecessor.get("address");
                         String host = (String) address.get("host");
-                        String port = address.get("port")+"";
+                        String port = address.get("port") + "";
                         String type = (String) predecessor.get("type");
                         String originNodeName = (String) predecessor.get("nodeName");
                         if (type.equals("Add")) {
-                            Listener zmqListener = new Listener(host, port, commConfig.getEncodingType(), nodeName,  errorHandler);
+                            Listener zmqListener = new Listener(host, port, commConfig.getEncodingType(), nodeName, errorHandler);
                             MessageListener listener = new MessageListener(commConfig, zmqListener, originNodeName);
                             listener.register(this);
                             if (listeningToMessages) {
                                 listener.start();
                             }
-                            messageListeners.put(host + port, listener);                        }
+                            messageListeners.put(host + port, listener);
+                        }
                         if (type.equals("Del")) {
                             MessageListener listener = messageListeners.get(host + port);
                             if (listeningToMessages && listener != null) {
@@ -95,6 +96,15 @@ public class StreamingManager implements IMessageListener {
         local.remove();
     }
 
+    @Override
+    public void onMessage(Object msg, String origin, String sendMessageId) {
+        local.set(sendMessageId);
+        registeredListeners.stream().forEach(listener -> {
+            listener.onMessage(msg, origin);
+        });
+        local.remove();
+    }
+
     public void startMessageListening() {
         listeningToMessages = true;
         synchronized (messageListeners) {
@@ -104,8 +114,8 @@ public class StreamingManager implements IMessageListener {
             @Override
             public void run() {
                 while (listeningToMessages == true) {
-                    Map<String, MessageListener>  clonedMessageListeners = new HashMap(messageListeners);
-                        clonedMessageListeners.values().stream().forEach(messageListener -> messageListener.fetch());
+                    Map<String, MessageListener> clonedMessageListeners = new HashMap(messageListeners);
+                    clonedMessageListeners.values().stream().forEach(messageListener -> messageListener.fetch());
                     try {
                         Thread.sleep(2);
                     } catch (InterruptedException e) {
@@ -157,5 +167,9 @@ public class StreamingManager implements IMessageListener {
         synchronized (messageListeners) {
             messageListeners.clear();
         }
+    }
+
+    public String getCurrentSendMessageId() {
+        return (String) local.get();
     }
 }

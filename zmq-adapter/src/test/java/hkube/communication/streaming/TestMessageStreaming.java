@@ -71,6 +71,11 @@ public class TestMessageStreaming {
                 data[0] = (Map) msg;
                 origins[0] = origin;
             }
+
+            @Override
+            public void onMessage(Object msg, String origin, String sendMessageId) {
+
+            }
         });
         msgProducer.start();
 
