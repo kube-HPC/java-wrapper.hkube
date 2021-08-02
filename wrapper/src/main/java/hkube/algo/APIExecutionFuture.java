@@ -8,8 +8,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class APIExecutionFuture implements Future<Map> {
-    Map result = null;
+public class APIExecutionFuture implements Future<Object> {
+    Object result = null;
 
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
@@ -27,13 +27,13 @@ public class APIExecutionFuture implements Future<Map> {
     }
 
     @Override
-    public Map get() throws InterruptedException, ExecutionException {
-        Map result = this.result;
+    public Object get() throws InterruptedException, ExecutionException {
+        Object result = this.result;
         return result;
     }
 
     @Override
-    public Map get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+    public Object get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
         long startTime = System.nanoTime();
         timeout = unit.toNanos(timeout);
         while (!isDone() && System.nanoTime() < (startTime + timeout)) {
@@ -45,7 +45,7 @@ public class APIExecutionFuture implements Future<Map> {
         return result;
     }
 
-    public void setResult(Map result) {
+    public void setResult(Object result) {
             this.result = result;
     }
 }

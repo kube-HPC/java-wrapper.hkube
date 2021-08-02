@@ -17,12 +17,15 @@ import hkube.model.HeaderContentPair;
 import hkube.storage.StorageFactory;
 import hkube.storage.TaskStorage;
 import hkube.consts.messages.Incomming;
+import hkube.utils.IPrinter;
+import hkube.utils.PrintStreamInterceptor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.glassfish.tyrus.client.ClientManager;
 import org.json.JSONObject;
 
 import javax.websocket.*;
+import java.io.PrintStream;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -49,16 +52,19 @@ public class Wrapper implements ICommandSender, IContext {
     StreamingManager streamingManager;
     String nodeName;
     boolean stopping;
+    PrintStreamInterceptor interceptor;
 
 
     private static final Logger logger = LogManager.getLogger();
+    private PrintStream originalOutput;
+
     public Wrapper(IAlgorithm algorithm, WrapperConfig config) {
         System.out.println("IP is " + System.getenv("POD_IP"));
         Cache.init(config.commConfig.getMaxCacheSize());
         mConfig = config;
         dataAdapter = new DataAdapter(mConfig, new RequestFactory());
         streamingManager = new StreamingManager(this, config.commConfig);
-        hkubeAPI = new HKubeAPIImpl(this,this, dataAdapter, streamingManager,isDebugMode);
+        hkubeAPI = new HKubeAPIImpl(this, this, dataAdapter, streamingManager, isDebugMode);
         if (!isDebugMode) {
             zmqServer = new ZMQServer(mConfig.commConfig);
         } else {
@@ -71,6 +77,13 @@ public class Wrapper implements ICommandSender, IContext {
         taskResultStorage = new StorageFactory(config.storageConfig).getTaskStorage();
         workerEncoder = new EncodingManager(mConfig.getEncodingType());
         connect();
+        originalOutput = System.out;
+        interceptor = new PrintStreamInterceptor(originalOutput, new IPrinter() {
+            @Override
+            public void print(String data) {
+                sendMessage(Outgoing.logData,  new String []{data}, false);
+            }
+        });
     }
 
     public static void setDebugMode() {
@@ -139,7 +152,11 @@ public class Wrapper implements ICommandSender, IContext {
         logger.info("websocket closed with reason :" + reason);
         this.userSession = null;
         mAlgorithm.Cleanup();
-        System.exit(-1);
+        if (reason.getCloseCode().getCode() == 1013) {
+            logger.error("Another user is already connected");
+            System.exit(-1);
+        }
+//        System.exit(-1);
     }
 
     /**
@@ -170,6 +187,7 @@ public class Wrapper implements ICommandSender, IContext {
             byte[] bytes = workerEncoder.encodeNoHeader(root);
             ByteBuffer buffer = ByteBuffer.wrap(bytes);
             this.userSession.getAsyncRemote().sendBinary(buffer);
+            logger.info(command + " sent");
         }
     }
 
@@ -196,11 +214,14 @@ public class Wrapper implements ICommandSender, IContext {
     private boolean isStreaming() {
         return (mArgs != null && mArgs.get("kind") != null && mArgs.get("kind").equals("stream"));
     }
-    public String getJobId(){
+
+    public String getJobId() {
         return (String) mArgs.get("jobId");
     }
+
     private void onMessage(Map msgAsMap) {
         try {
+
             String command = (String) msgAsMap.get("command");
             Object data = msgAsMap.get("data");
             listeners.forEach(listener -> {
@@ -217,7 +238,13 @@ public class Wrapper implements ICommandSender, IContext {
                             if (isStreaming() && "stateless".equals(mArgs.get("stateType"))) {
                                 mAlgorithm = statelessAlg;
                             }
+                            if (isDebugMode) {
+                                System. setOut(interceptor);
+                            }
                             mAlgorithm.Init(mArgs);
+                            if (isDebugMode) {
+                                System. setOut(originalOutput);
+                            }
                             logger.info("Sending initialized");
                             sendMessage("initialized", null, false);
                             break;
@@ -252,7 +279,13 @@ public class Wrapper implements ICommandSender, IContext {
                                 }
                                 logger.debug("fBefore running algorithm");
                                 Object res;
+                                if (isDebugMode) {
+                                    System. setOut(interceptor);
+                                }
                                 res = mAlgorithm.Start(mArgs, hkubeAPI);
+                                if (isDebugMode) {
+                                    System. setOut(originalOutput);
+                                }
                                 logger.debug("After running algorithm");
                                 String taskId = (String) mArgs.get("taskId");
                                 String jobId = (String) mArgs.get("jobId");
@@ -262,7 +295,7 @@ public class Wrapper implements ICommandSender, IContext {
                                 HeaderContentPair encodedData = dataAdapter.encode(res, mConfig.commConfig.getEncodingType());
                                 boolean dataAdded = dataServer.addTaskData(taskId, encodedData);
                                 int resEncodedSize = encodedData.getContent().length;
-                                Map resultStoringInfo = dataAdapter.getStoringInfo( jobId, taskId, metaData, resEncodedSize);
+                                Map resultStoringInfo = dataAdapter.getStoringInfo(jobId, taskId, metaData, resEncodedSize);
                                 if (logger.isDebugEnabled()) {
                                     logger.debug("result storing data" + resultStoringInfo);
                                 }
@@ -329,14 +362,14 @@ public class Wrapper implements ICommandSender, IContext {
                         case Incomming.serviceDiscoveryUpdate:
                             discoveryUpdate((List) data);
                         case Incomming.streamingInMessage:
-                            String origin = (String)((Map)data).get("origin");
-                            Map msg = (Map) ((Map)data).get("payload");
-                            String sendMessageId = (String)((Map)data).get("sendMessageId");
+                            String origin = (String) ((Map) data).get("origin");
+                            Map msg = (Map) ((Map) data).get("payload");
+                            String sendMessageId = (String) ((Map) data).get("sendMessageId");
 
-                            streamingManager.onMessage(msg,origin,sendMessageId);
+                            streamingManager.onMessage(msg, origin, sendMessageId);
                             Map sendMessagIdMap = new HashMap();
-                            sendMessagIdMap.put("sendMessageId",sendMessageId);
-                            sendMessage(Outgoing.streamingInMessageDone,sendMessagIdMap,false);
+                            sendMessagIdMap.put("sendMessageId", sendMessageId);
+                            sendMessage(Outgoing.streamingInMessageDone, sendMessagIdMap, false);
                         default:
                             logger.info("got command: " + command);
 

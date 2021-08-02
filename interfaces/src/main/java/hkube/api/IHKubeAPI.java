@@ -8,21 +8,21 @@ import java.util.Map;
 import java.util.concurrent.Future;
 
 public interface IHKubeAPI {
-    public Future<Map> startAlgorithmAsynch(String name, List input, boolean resultAsRaw);
+    public Future<Object> startAlgorithmAsynch(String name, List input, boolean resultAsRaw);
 
-    public Map startAlgorithm(String name, List input, boolean resultAsRaw);
+    public Object startAlgorithm(String name, List input, boolean resultAsRaw);
 
-    public Future<Map> startStoredPipeLineAsynch(String name, Map flowInput);
+    public Future<Object> startStoredPipeLineAsynch(String name, Map flowInput);
 
-    public Future<Map> startStoredPipeLineAsynch(String name, Map flowInput, boolean includeResult);
+    public Future<Object> startStoredPipeLineAsynch(String name, Map flowInput, boolean includeResult);
 
-    public Map startStoredPipeLine(String name, Map flowInput);
+    public Object startStoredPipeLine(String name, Map flowInput);
 
-    public Map startStoredPipeLine(String name, Map flowInput, boolean includeResult);
+    public Object startStoredPipeLine(String name, Map flowInput, boolean includeResult);
 
-    public Future<Map> startRawSubPipeLineAsynch(String name, INode[] nodes, Map flowInput, Map options, Map webhooks);
+    public Future<Object> startRawSubPipeLineAsynch(String name, INode[] nodes, Map flowInput, Map options, Map webhooks);
 
-    public Map startRawSubPipeLine(String name, INode[] nodes, Map flowInput, Map options, Map webhooks);
+    public Object startRawSubPipeLine(String name, INode[] nodes, Map flowInput, Map options, Map webhooks);
 
     void registerInputListener(IStreamingManagerMsgListener onMessage);
 
