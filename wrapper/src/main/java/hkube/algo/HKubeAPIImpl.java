@@ -37,7 +37,7 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
     }
 
     @Override
-    public Future<Map> startAlgorithmAsynch(String name, List input, boolean resultAsRaw) {
+    public Future<Object> startAlgorithmAsynch(String name, List input, boolean resultAsRaw) {
         APIExecutionFuture future = new APIExecutionFuture();
         String executionId = getExecutionId(future);
         Map data = new HashMap();
@@ -53,18 +53,18 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
     }
 
     @Override
-    public Map startAlgorithm(String name, List input, boolean resultAsRaw) {
+    public Object startAlgorithm(String name, List input, boolean resultAsRaw) {
         APIExecutionFuture future = (APIExecutionFuture) startAlgorithmAsynch(name, input, resultAsRaw);
         return returnWhenExecDone(future);
     }
 
     @Override
-    public Future<Map> startStoredPipeLineAsynch(String name, Map flowInput) {
+    public Future<Object> startStoredPipeLineAsynch(String name, Map flowInput) {
         return startStoredPipeLineAsynch(name, flowInput, true);
     }
 
     @Override
-    public Future<Map> startStoredPipeLineAsynch(String name, Map flowInput, boolean includeResult) {
+    public Future<Object> startStoredPipeLineAsynch(String name, Map flowInput, boolean includeResult) {
         APIExecutionFuture future = new APIExecutionFuture();
         String executionId = getExecutionId(future);
         Map data = new HashMap();
@@ -79,19 +79,19 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
     }
 
     @Override
-    public Map startStoredPipeLine(String name, Map flowInput) {
+    public Object startStoredPipeLine(String name, Map flowInput) {
         APIExecutionFuture future = (APIExecutionFuture) startStoredPipeLineAsynch(name, flowInput);
         return returnWhenExecDone(future);
     }
 
     @Override
-    public Map startStoredPipeLine(String name, Map flowInput, boolean includeResult) {
+    public Object startStoredPipeLine(String name, Map flowInput, boolean includeResult) {
         APIExecutionFuture future = (APIExecutionFuture) startStoredPipeLineAsynch(name, flowInput, includeResult);
         return returnWhenExecDone(future);
     }
 
     @Override
-    public Future<Map> startRawSubPipeLineAsynch(String name, INode[] nodes, Map flowInput, Map options, Map webhooks) {
+    public Future<Object> startRawSubPipeLineAsynch(String name, INode[] nodes, Map flowInput, Map options, Map webhooks) {
         APIExecutionFuture future = new APIExecutionFuture();
         String executionId;
         executionId = getExecutionId(future);
@@ -118,7 +118,7 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
     }
 
     @Override
-    public Map startRawSubPipeLine(String name, INode[] nodes, Map flowInput, Map options, Map webhooks) {
+    public Object startRawSubPipeLine(String name, INode[] nodes, Map flowInput, Map options, Map webhooks) {
         APIExecutionFuture future = (APIExecutionFuture) startRawSubPipeLineAsynch(name, nodes, flowInput, options, webhooks);
         return returnWhenExecDone(future);
     }
@@ -129,7 +129,7 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
         return executionId;
     }
 
-    Map returnWhenExecDone(APIExecutionFuture future) {
+    Object returnWhenExecDone(APIExecutionFuture future) {
         while (!future.isDone()) {
             try {
                 Thread.sleep(100);
@@ -177,7 +177,7 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
                 }
                 ((Map) data).put("response", res);
             }
-            executions.get(executionId).setResult(((Map) data));
+            executions.get(executionId).setResult((((Map) data).get("response")));
         }
         logger.debug("Execution result" + data);
     }

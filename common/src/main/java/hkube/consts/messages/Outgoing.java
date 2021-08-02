@@ -15,4 +15,5 @@ public class Outgoing {
     public static final String stopSubPipeline = "stopSubPipeline";
     public static final String streamingOutMessage = "streamingOutMessage";
     public static final String streamingInMessageDone = "streamingInMessageDone";
+    public static final String logData = "logData";
 }

@@ -1,5 +1,7 @@
 import hkube.algo.wrapper.IAlgorithm;
 import hkube.api.IHKubeAPI;
+import hkube.api.INode;
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -41,7 +43,7 @@ public class HkubeAPI implements IAlgorithm {
         List ll = new ArrayList();
         ll.add("shash");
         ll.add("ff");
-        Map stroedResult = hkubeAPI.startAlgorithm("green-alg",ll,false);
+//        Map stroedResult = hkubeAPI.startAlgorithm("green-alg",ll,false);
 
 
 //        final String nodeName = "node1";
@@ -61,43 +63,46 @@ public class HkubeAPI implements IAlgorithm {
 //        }
 //        byte[] outputAsBytes = buffer.toByteArray();
 //        String str = new String(outputAsBytes);
+//
 
 
-//
-//        INode node = new INode() {
-//            @Override
-//            public String getName() {
-//                return "yellow-alg-NOde";
-//            }
-//
-//            @Override
-//            public JSONObject[] getInput() {
-//                return new JSONObject[0];
-//            }
-//
-//            @Override
-//            public void setInput(JSONObject[] input) {
-//
-//            }
-//
-//            @Override
-//            public String getAlgorithmName() {
-//                return "yellow-alg";
-//            }
-//
-//            @Override
-//            public void setAlgorithmName(String algorithmName) {
-//
-//            }
-//        };
-//        INode[] nodes = {node};
-////        Map raw = hkubeAPI.startRawSubPipeLine("myRaw", nodes, new HashMap(), new HashMap(), new HashMap());
-//        Map algResult = new HashMap<>();
+        INode node = new INode()
+        {
+            @Override
+            public String getName() {
+                return "yellow-alg-NOde";
+            }
+
+            @Override
+            public JSONObject[] getInput() {
+                return new JSONObject[0];
+            }
+
+            @Override
+            public void setInput(JSONObject[] input) {
+
+            }
+
+            @Override
+            public String getAlgorithmName() {
+                return "green-alg";
+            }
+
+            @Override
+            public void setAlgorithmName(String algorithmName) {
+
+            }
+        };
+        INode[] nodes = {node};
+//        Map raw = hkubeAPI.startRawSubPipeLine("myRaw", nodes, new HashMap(), new HashMap(), new HashMap());
+//        List raw = (List)hkubeAPI.startStoredPipeLine("simple",new HashMap(),true);
+        Map algResult = new HashMap<>();
+        System.out.println("PrintSomething");
 //        algResult.put("storedResult", stroedResult);
-////        algResult.put("algo-green-result", result);
-////        algResult.put("rawResult", raw);
-//        return algResult;
-        return stroedResult;
+//        algResult.put("algo-green-result", result);
+//        algResult.put("rawResult", raw);
+        return input;
+//        return stroedResult;
     }
 
     @Override

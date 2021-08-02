@@ -53,8 +53,8 @@ public class HKubeAPITest {
                 return single;
             }
         }, null,false);
-        Map result = api.startStoredPipeLine("pipeName", new HashMap());
-        assert ((Map) result.get("response")).get("storedResult") == "5";
+        Object result = api.startStoredPipeLine("pipeName", new HashMap());
+        assert ((Map) ((Map)result).get("response")).get("storedResult") == "5";
     }
 
     @Test
@@ -94,7 +94,7 @@ public class HKubeAPITest {
             }
         },null,false);
 
-        Map result = api.startRawSubPipeLine("pipeName", new INode[]{}, new HashMap(), null, null);
+        Map result = (Map)api.startRawSubPipeLine("pipeName", new INode[]{}, new HashMap(), null, null);
         assert ((Map) result.get("response")).get("rawResult") == "2";
     }
 
