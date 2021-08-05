@@ -77,7 +77,7 @@ public class Wrapper implements ICommandSender, IContext {
         taskResultStorage = new StorageFactory(config.storageConfig).getTaskStorage();
         workerEncoder = new EncodingManager(mConfig.getEncodingType());
         connect();
-        originalOutput = System.out;
+        originalOutput = System.out.printf("");//Access out, so it won't be null
         interceptor = new PrintStreamInterceptor(originalOutput, new IPrinter() {
             @Override
             public void print(String data) {

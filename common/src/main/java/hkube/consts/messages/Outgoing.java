@@ -13,6 +13,8 @@ public class Outgoing {
     public static final String startRawSubPipeline = "startRawSubPipeline";
     public static final String startStoredSubPipeline = "startStoredSubPipeline";
     public static final String stopSubPipeline = "stopSubPipeline";
+    public static final String startSpan = "startSpan";
+    public static final String finishSpan = "finishSpan";
     public static final String streamingOutMessage = "streamingOutMessage";
     public static final String streamingInMessageDone = "streamingInMessageDone";
     public static final String logData = "logData";

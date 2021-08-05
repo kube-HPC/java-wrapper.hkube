@@ -101,6 +101,11 @@ public class HkubeAPI implements IAlgorithm {
 //        algResult.put("storedResult", stroedResult);
 //        algResult.put("algo-green-result", result);
 //        algResult.put("rawResult", raw);
+        hkubeAPI.startSpan("a start",new HashMap());
+        hkubeAPI.startSpan("b start",new HashMap());
+        hkubeAPI.finishSpan(new HashMap());
+        hkubeAPI.finishSpan(new HashMap());
+
         return input;
 //        return stroedResult;
     }
