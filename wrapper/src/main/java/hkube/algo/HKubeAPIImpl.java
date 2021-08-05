@@ -206,6 +206,21 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
         sendMessage(msg, null);
     }
 
+    @Override
+    public void startSpan(String name,Map tags) {
+        Map data = new HashMap();
+        data.put("name",name);
+        data.put("tags",tags);
+        commandSender.sendMessage(Outgoing.startSpan,data,false);
+    }
+
+    @Override
+    public void finishSpan(Map tags) {
+        Map data = new HashMap();
+        data.put(tags,tags);
+        commandSender.sendMessage(Outgoing.finishSpan,data,false);
+    }
+
     public void stopStreaming(boolean force) {
         streamingManager.stopStreaming(force);
     }
