@@ -127,7 +127,7 @@
         </repository>
     </distributionManagement>
     <properties>
-        <revision>2.0-SNAPSHOT</revision>
+        <revision>2.0.00</revision>
     </properties>
 
     <modules>
