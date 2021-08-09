@@ -6,3 +6,4 @@ target/
 /original-encapsulated-algorithm.pom
 /original-encapsulated-algorithm.jar
 /algorithm-example/encapsulated-algorithm/
+*.flattened-pom.xml
