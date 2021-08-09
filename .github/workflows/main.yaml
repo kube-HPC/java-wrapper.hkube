@@ -30,5 +30,14 @@ jobs:
         run: |
            docker run -d -p 9000:9000 --name minio1 -e "MINIO_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE" \
            -e "MINIO_SECRET_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" minio/minio server /data
-      - name: Build with Maven
-        run: mvn --batch-mode test
+      - name: Install gpg secret key
+        run: |
+          cat <(echo -e "aabb") | gpg --batch --import
+          gpg --list-secret-keys --keyid-format LONG
+      - name: Install
+        run: |
+          mvn \
+            --no-transfer-progress \
+            --batch-mode \
+            -Dgpg.passphrase=aabb \
+            clean install
