@@ -41,3 +41,21 @@ jobs:
                 --batch-mode \
                 -Dgpg.passphrase=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }} \
             clean install
+  publish:
+    if: github.ref == 'refs/heads/master'
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: setup git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+      - name: version
+        run: |
+          git checkout -f -b version-branch
+          npm version patch --no-commit-hooks -m "$(git log -1 --pretty=%B) .... bump version [skip ci]"
+          git push origin version-branch:master --follow-tags
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 14
