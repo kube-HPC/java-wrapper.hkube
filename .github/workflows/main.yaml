@@ -56,16 +56,14 @@ jobs:
           git checkout -f -b version-branch
           export revision=`npm version patch --no-commit-hooks -m "$(git log -1 --pretty=%B) .... bump version [skip ci]"`
           git push origin version-branch:master --follow-tags
+          echo revision=$revision >> $GITHUB_ENV
       - uses: actions/setup-node@v1
         with:
           node-version: 14
       - name: Set SNAPSHOT
+        if: "contains(!github.event.head_commit.message, '[Release]')"
         run: |
-          export  suffix=-SNAPSHOT
-      - name: Set Release
-        if: "contains(github.event.head_commit.message, '[Release]')"
-        run: |
-          export  suffix=""
+          echo suffix=-SNAPSHOT >> $GITHUB_ENV
       - name: Deploy
         run: |
           mvn \
