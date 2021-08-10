@@ -40,7 +40,7 @@ jobs:
                 --no-transfer-progress \
                 --batch-mode \
                 -Dgpg.passphrase=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }} \
-            clean install
+            clean test
   publish:
     if: github.ref == 'refs/heads/master'
     needs: test
@@ -54,8 +54,23 @@ jobs:
       - name: version
         run: |
           git checkout -f -b version-branch
-          npm version patch --no-commit-hooks -m "$(git log -1 --pretty=%B) .... bump version [skip ci]"
+          export revision=`npm version patch --no-commit-hooks -m "$(git log -1 --pretty=%B) .... bump version [skip ci]"`
           git push origin version-branch:master --follow-tags
       - uses: actions/setup-node@v1
         with:
           node-version: 14
+      - name: Set is Release
+        run:|
+          export  suffix=-SNAPSHOT
+        if: "contains(github.event.head_commit.message, '[Release]')"
+        run:|
+          export  suffix=""
+      - name: Deploy
+        run: |
+          mvn \
+                -Drevision=$revision$suffix
+                -Dmaven.test.skip=true \
+                --no-transfer-progress \
+                --batch-mode \
+                -Dgpg.passphrase=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }} \
+            clean deploy
