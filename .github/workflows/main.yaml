@@ -72,5 +72,8 @@ jobs:
                 --batch-mode \
                 -Dgpg.passphrase=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }} \
                 -Drevision=$revision$suffix \
+                -Drepo.id=ossrh \
+                -Drepo.login=${{ secrets.MVN_USER }} \
+                -Drepo.pwd=${{ secrets.MVN_PASSWORD }} \
                 -Dmaven.test.skip=true \
              clean deploy
