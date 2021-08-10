@@ -60,10 +60,10 @@ jobs:
         with:
           node-version: 14
       - name: Set is Release
-        run:|
+        run: |
           export  suffix=-SNAPSHOT
         if: "contains(github.event.head_commit.message, '[Release]')"
-        run:|
+        run: |
           export  suffix=""
       - name: Deploy
         run: |
