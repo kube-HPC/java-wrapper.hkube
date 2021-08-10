@@ -66,6 +66,7 @@ jobs:
           echo suffix=-SNAPSHOT >> $GITHUB_ENV
       - name: Deploy
         run: |
+          cp settings.xml ~/.m2/settings.xml
           echo -Drevision=$revision$suffix
           mvn \
                 --no-transfer-progress \
