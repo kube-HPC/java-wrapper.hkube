@@ -68,8 +68,8 @@ jobs:
         run: |
           echo -Drevision=$revision$suffix
           mvn \
-                -Drevision=$revision$suffix
                 --no-transfer-progress \
                 --batch-mode \
                 -Dgpg.passphrase=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }} \
-            clean install
+                -Drevision=$revision$suffix \
+             clean test
