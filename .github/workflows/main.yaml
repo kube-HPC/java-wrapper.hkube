@@ -30,11 +30,7 @@ jobs:
         run: |
            docker run -d -p 9000:9000 --name minio1 -e "MINIO_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE" \
            -e "MINIO_SECRET_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" minio/minio server /data
-      - name: Install gpg secret key
-        run: |
-            cat <(echo -e "${{ secrets.OSSRH_GPG_SECRET_KEY }}") | gpg --batch --import
-            gpg --list-secret-keys --keyid-format LONG
-      - name: Install
+      - name: run tests
         run: |
           mvn \
                 --no-transfer-progress \
@@ -60,6 +56,10 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 14
+      - name: Install gpg secret key
+        run: |
+            cat <(echo -e "${{ secrets.OSSRH_GPG_SECRET_KEY }}") | gpg --batch --import
+            gpg --list-secret-keys --keyid-format LONG
       - name: Set SNAPSHOT
         if: "!contains(github.event.head_commit.message, '[Release]')"
         run: |
