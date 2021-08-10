@@ -66,9 +66,9 @@ jobs:
           echo suffix=-SNAPSHOT >> $GITHUB_ENV
       - name: Deploy
         run: |
+          echo -Drevision=$revision$suffix
           mvn \
                 -Drevision=$revision$suffix
-                -Dmaven.test.skip=true \
                 --no-transfer-progress \
                 --batch-mode \
                 -Dgpg.passphrase=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}  deploy
