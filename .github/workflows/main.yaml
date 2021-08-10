@@ -59,9 +59,10 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 14
-      - name: Set is Release
+      - name: Set SNAPSHOT
         run: |
           export  suffix=-SNAPSHOT
+      - name: Set Release
         if: "contains(github.event.head_commit.message, '[Release]')"
         run: |
           export  suffix=""
