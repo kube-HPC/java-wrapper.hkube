@@ -35,7 +35,7 @@ const main = async () => {
     await octokit.repos.createOrUpdateFileContents({
         ...ownerRepo,
         path: file,
-        message: `update nodejs wrapper to ${version}`,
+        message: `update java wrapper to ${version}`,
         branch: branchName,
         sha: versionFileSha,
         content: newContent
@@ -43,7 +43,7 @@ const main = async () => {
 
     await octokit.pulls.create({
         ...ownerRepo,
-        title: `update nodejs wrapper to ${version}`,
+        title: `update java wrapper to ${version}`,
         head: branchName,
         base: 'master'
     });
