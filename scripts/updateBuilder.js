@@ -19,7 +19,7 @@ const main = async () => {
 
     const versionFileSha = packageJsonContentResponse.data.sha;
     // update package json
-    const newContent = version;
+    const newContent = version.toString('base64');
 
     const masterShaResponse = await octokit.repos.listCommits({
         ...ownerRepo,
