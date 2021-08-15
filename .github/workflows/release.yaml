@@ -6,10 +6,10 @@ name: CI
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
   pull_request:
-    branches: [master]
+    branches: [release_2.0]
   push:
-    branches: [master]
-    
+    branches: [release_2.0]
+
   workflow_dispatch:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
@@ -60,15 +60,11 @@ jobs:
         run: |
             cat <(echo -e "${{ secrets.OSSRH_GPG_SECRET_KEY }}") | gpg --batch --import
             gpg --list-secret-keys --keyid-format LONG
-      - name: Set SNAPSHOT
-        if: "!contains(github.event.head_commit.message, '[Release]')"
-        run: |
-          echo suffix=-SNAPSHOT >> $GITHUB_ENV
       - name: Deploy
         run: |
           mkdir ~/.m2
           cp settings.xml ~/.m2/settings.xml
-          echo -Drevision=$revision$suffix
+          echo -Drevision=$revision
           mvn \
                 --no-transfer-progress \
                 --batch-mode \
@@ -79,9 +75,3 @@ jobs:
                 -Drepo.pwd=${{ secrets.MVN_PASSWORD }} \
                 -Dmaven.test.skip=true \
              clean deploy
-      - name: create pr in hkube
-        run: |
-          npm install --no-package-lock --no-save @octokit/rest@^18.0.0
-          npm run update-builder
-        env:
-           GH_TOKEN: ${{ secrets.GH_TOKEN }}
