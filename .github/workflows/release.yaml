@@ -50,7 +50,7 @@ jobs:
         run: |
           git checkout -f -b version-branch
           export revision=`npm version patch --no-commit-hooks -m "$(git log -1 --pretty=%B) .... bump version [skip ci]"`
-          git push origin version-branch:master --follow-tags
+          git push origin version-branch:release_2.0 --follow-tags
           echo revision=$revision >> $GITHUB_ENV
       - uses: actions/setup-node@v1
         with:
