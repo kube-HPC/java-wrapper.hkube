@@ -1,6 +1,6 @@
 {
   "name": "java-wrapper",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "java wrapper",
   "scripts": {
     "update-builder": "node scripts/updateBuilder.js"
