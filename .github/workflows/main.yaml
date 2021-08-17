@@ -61,7 +61,6 @@ jobs:
             cat <(echo -e "${{ secrets.OSSRH_GPG_SECRET_KEY }}") | gpg --batch --import
             gpg --list-secret-keys --keyid-format LONG
       - name: Set SNAPSHOT
-        if: "!contains(github.event.head_commit.message, '[Release]')"
         run: |
           echo suffix=-SNAPSHOT >> $GITHUB_ENV
       - name: Deploy
@@ -82,6 +81,9 @@ jobs:
       - name: create pr in hkube
         run: |
           npm install --no-package-lock --no-save @octokit/rest@^18.0.0
-          npm run update-builder
+          npm run update-file
         env:
            GH_TOKEN: ${{ secrets.GH_TOKEN }}
+           updatedFilePath: 'core/algorithm-builder/environments/java/wrapper/version.txt'
+           fileContent: '${{env.revision}}${{env.suffix}}'
+           repository: 'hkube'
