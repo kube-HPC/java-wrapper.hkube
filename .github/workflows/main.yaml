@@ -88,13 +88,11 @@ jobs:
            fileContent: '${{env.revision}}${{env.suffix}}'
            repository: 'hkube'
            targetBranch: 'master'
-      - name: create pr in artifacts-registry
-        run: |
-          npm install --no-package-lock --no-save @octokit/rest@^18.0.0
-          npm run update-file
+      - name: trigger artifacts registry
+        uses: octokit/request-action@v2.x
+        with:
+          route: POST /repos/kube-HPC/artifacts-registry/dispatches
+          event_type: trigger
+          client_payload: "{\"version\": \"${{env.revision}}${{env.suffix}}\" , \"wrapper\": \"java\" , \"action\": \"dev-version\" }"
         env:
-           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-           updatedFilePath: 'java-wrapper-version.txt'
-           fileContent: '${{env.revision}}${{env.suffix}}'
-           repository: 'artifacts-registry'
-           targetBranch: 'main'
+          GITHUB_TOKEN: '${{ secrets.GH_TOKEN }}'

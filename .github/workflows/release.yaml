@@ -75,13 +75,3 @@ jobs:
                 -Drepo.pwd=${{ secrets.MVN_PASSWORD }} \
                 -Dmaven.test.skip=true \
              clean deploy
-      - name: create pr in artifacts-registry
-        run: |
-          npm install --no-package-lock --no-save @octokit/rest@^18.0.0
-          npm run update-file
-        env:
-           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-           updatedFilePath: 'java-wrapper-version.txt'
-           fileContent: '${{env.revision}}'
-           repository: 'artifacts-registry'
-           targetBranch: 'release_v2.1'
