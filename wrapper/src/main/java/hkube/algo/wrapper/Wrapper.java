@@ -269,9 +269,21 @@ public class Wrapper implements ICommandSender, IContext {
                             logger.info("Sending started");
                             sendMessage("started", null, false);
                             Collection input;
+                            hkubeAPI.startSpan("start",new HashMap());
                             try {
+
+                                hkubeAPI.startSpan("getData",new HashMap());
                                 logger.debug("Before fetching input data");
-                                input = dataAdapter.placeData(mArgs);
+                                try {
+                                    input = dataAdapter.placeData(mArgs);
+                                }
+                                catch (Exception e){
+                                    HashMap traceData = new HashMap();
+                                    traceData.put("error","true");
+                                    hkubeAPI.finishSpan(traceData);
+                                    throw e;
+                                }
+                                hkubeAPI.finishSpan(new HashMap());
                                 mArgs.put("input", input);
                                 logger.debug("After fetching input data");
                                 if (logger.isDebugEnabled()) {
@@ -315,7 +327,11 @@ public class Wrapper implements ICommandSender, IContext {
                                 } else {
                                     sendMessage("done", res, false);
                                 }
+                                hkubeAPI.finishSpan(new HashMap());
                             } catch (Exception ex) {
+                                HashMap traceData = new HashMap();
+                                traceData.put("error","true");
+                                hkubeAPI.finishSpan(traceData);
                                 logger.error("unexpected exception", ex);
                                 Map<String, String> res = new HashMap<>();
                                 res.put("code", "Failed");

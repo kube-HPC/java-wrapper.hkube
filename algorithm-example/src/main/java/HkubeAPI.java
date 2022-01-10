@@ -29,7 +29,7 @@ public class HkubeAPI implements IAlgorithm {
         data.put("mirror", input);
         ArrayList jsonArray = new ArrayList();
         jsonArray.add(data);
-//        Map result = hkubeAPI.startAlgorithm("green-alg", jsonArray, false);
+        Object result = hkubeAPI.startAlgorithm("green-alg", jsonArray, false);
         Map simpleInput = new HashMap();
 //        Map files = new HashMap();
 //        files.put("link", "thislink");
@@ -39,10 +39,10 @@ public class HkubeAPI implements IAlgorithm {
 
 
 
-//        Map stroedResult = hkubeAPI.startStoredPipeLine("bug", simpleInput);
-        List ll = new ArrayList();
-        ll.add("shash");
-        ll.add("ff");
+        Object stroedResult = hkubeAPI.startStoredPipeLine("simple", simpleInput);
+//        List ll = new ArrayList();
+//        ll.add("shash");
+//        ll.add("ff");
 //        Map stroedResult = hkubeAPI.startAlgorithm("green-alg",ll,false);
 
 
