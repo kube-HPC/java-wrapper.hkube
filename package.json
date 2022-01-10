@@ -1,6 +1,6 @@
 {
   "name": "java-wrapper",
-  "version": "2.1.9",
+  "version": "2.1.10",
   "description": "java wrapper",
   "scripts": {
     "update-file": "node scripts/updateFile.js"
