@@ -276,6 +276,7 @@ public class Wrapper implements ICommandSender, IContext {
                                 logger.debug("Before fetching input data");
                                 try {
                                     input = dataAdapter.placeData(mArgs);
+                                    hkubeAPI.finishSpan(new HashMap());
                                 }
                                 catch (Exception e){
                                     HashMap traceData = new HashMap();
@@ -283,7 +284,6 @@ public class Wrapper implements ICommandSender, IContext {
                                     hkubeAPI.finishSpan(traceData);
                                     throw e;
                                 }
-                                hkubeAPI.finishSpan(new HashMap());
                                 mArgs.put("input", input);
                                 logger.debug("After fetching input data");
                                 if (logger.isDebugEnabled()) {
@@ -311,7 +311,7 @@ public class Wrapper implements ICommandSender, IContext {
                                 if (logger.isDebugEnabled()) {
                                     logger.debug("result storing data" + resultStoringInfo);
                                 }
-                                if (!isDebugMode) {
+                                hkubeAPI.finishSpan(new HashMap());                                if (!isDebugMode) {
                                     logger.info("Sending storeing");
                                     if (dataAdded) {
                                         sendMessage("storing", resultStoringInfo, false);
@@ -327,7 +327,7 @@ public class Wrapper implements ICommandSender, IContext {
                                 } else {
                                     sendMessage("done", res, false);
                                 }
-                                hkubeAPI.finishSpan(new HashMap());
+
                             } catch (Exception ex) {
                                 HashMap traceData = new HashMap();
                                 traceData.put("error","true");
