@@ -15,6 +15,11 @@ import java.util.Map;
 
 public class StreamingManager implements IMessageListener {
     ICommandSender errorHandler;
+
+    public MessageProducer getMessageProducer() {
+        return messageProducer;
+    }
+
     MessageProducer messageProducer;
     Map<String, MessageListener> messageListeners = new HashMap();
     List<IStreamingManagerMsgListener> registeredListeners = new ArrayList();

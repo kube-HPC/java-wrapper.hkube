@@ -7,6 +7,15 @@ public class MessageQueue {
     Map<String, ConsumerStats> consumersMap = new HashMap();
     Map<String, ArrayDeque<Long>> queueDurationCache = new HashMap();
     List<Message> queue = new ArrayList();
+
+    public int getMemorySize() {
+        return memorySize;
+    }
+
+    public Double getMaxSize() {
+        return maxSize;
+    }
+
     int memorySize = 0;
     Double maxSize;
 

@@ -76,13 +76,37 @@ public class MessageProducer {
         producerAdapter.produce(msg);
     }
 
+    public Map<String, Object> getStatistics() {
+        ArrayList statisticsPerNode = new ArrayList();
+        consumers.stream().forEach(consumer -> {
+
+            int queueSize = producerAdapter.getQueueSize(consumer);
+            int sent = producerAdapter.getSent(consumer);
+            int dropped = producerAdapter.getDropped(consumer);
+            Map singleNodeStatistics = new HashMap();
+            singleNodeStatistics.put("queueSize",queueSize);
+            singleNodeStatistics.put("nodeName", consumer);
+            singleNodeStatistics.put("sent", sent);
+            singleNodeStatistics.put("dropped", dropped);
+            statisticsPerNode.add(singleNodeStatistics);
+        });
+        Map statistics = new HashMap();
+        statistics.put("binarySize", producerAdapter.getMemorySize());
+        statistics.put("configuredMaxBinarySize", producerAdapter.getMaxSize());
+        statistics.put("statisticsPerNode", statisticsPerNode);
+
+        return statistics;
+
+    }
+
+
     class ResponseAccumulator implements IResponseAccumulator {
 
         @Override
         public void onResponse(byte[] response, String origin, Long grossDuration) {
             Map decodedResponse = (Map) encoding.decodeNoHeader(response);
             responseCount.put(origin, responseCount.get(origin) + 1);
-            Double duration =( (Number) decodedResponse.get("duration")).doubleValue();
+            Double duration = ((Number) decodedResponse.get("duration")).doubleValue();
             ArrayDeque<Double> durations = (ArrayDeque<Double>) durationCache.get(origin);
             ArrayDeque<Long> grossDurations = grossDurationCache.get(origin);
             durations.add(duration);

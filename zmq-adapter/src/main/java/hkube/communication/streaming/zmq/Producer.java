@@ -72,6 +72,15 @@ public class Producer implements IProducer {
         responseAccumulators.add(accumulator);
     }
 
+    @Override
+    public int getMemorySize() {
+        return queue.getMemorySize();
+    }
+
+    @Override
+    public Double getMaxSize() {
+        return queue.getMaxSize();
+    }
 
     public void produce(Message msg) {
         msg.setProduceTime(System.currentTimeMillis());

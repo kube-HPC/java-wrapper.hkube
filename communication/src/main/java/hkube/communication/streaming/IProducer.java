@@ -11,6 +11,10 @@ public interface IProducer {
     public int getQueueSize();
     public int getSent(String consumer);
     public  int getDropped(String consumer);
-
     public void registerResponseAccumulator(IResponseAccumulator accumulator);
+
+    public int getMemorySize() ;
+
+    public Double getMaxSize() ;
+
 }

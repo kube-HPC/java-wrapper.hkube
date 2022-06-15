@@ -29,13 +29,17 @@ public interface IHKubeAPI {
     void startMessageListening();
 
     void sendMessage(Object msg, String flowName);
+
     void sendMessage(Object msg);
 
-    void startSpan(String name,Map tags);
+    void startSpan(String name, Map tags);
+
     void finishSpan(Map tags);
 
     void stopStreaming(boolean force);
 
     boolean isListeningToMessages();
+
+    Map<String, Object> getStreamingStatistics();
 }
 

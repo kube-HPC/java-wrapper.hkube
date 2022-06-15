@@ -186,6 +186,25 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
         streamingManager.registerInputListener(onMessage);
     }
 
+    public Map<String, Object> getStreamingStatistics() {
+        if (streamingManager.getMessageProducer() != null) {
+            return streamingManager.getMessageProducer().getStatistics();
+        } else {
+            Map singleNodeMap = new HashMap();
+            singleNodeMap.put("nodeName", "NextNodeName");
+            singleNodeMap.put("sent", -1);
+            singleNodeMap.put("queueSize", -1);
+            singleNodeMap.put("dropped", -1);
+            ArrayList nodeList = new ArrayList();
+            nodeList.add(singleNodeMap);
+            Map mockMap = new HashMap();
+            mockMap.put("binarySize", -1);
+            mockMap.put("configuredMaxBinarySize", -1);
+            mockMap.put("statisticsPerNode", nodeList);
+            return  mockMap;
+        }
+    }
+
     public void startMessageListening() {
         streamingManager.startMessageListening();
     }
@@ -207,18 +226,18 @@ public class HKubeAPIImpl implements IHKubeAPI, CommandResponseListener {
     }
 
     @Override
-    public void startSpan(String name,Map tags) {
+    public void startSpan(String name, Map tags) {
         Map data = new HashMap();
-        data.put("name",name);
-        data.put("tags",tags);
-        commandSender.sendMessage(Outgoing.startSpan,data,false);
+        data.put("name", name);
+        data.put("tags", tags);
+        commandSender.sendMessage(Outgoing.startSpan, data, false);
     }
 
     @Override
     public void finishSpan(Map tags) {
         Map data = new HashMap();
-        data.put(tags,tags);
-        commandSender.sendMessage(Outgoing.finishSpan,data,false);
+        data.put(tags, tags);
+        commandSender.sendMessage(Outgoing.finishSpan, data, false);
     }
 
     public void stopStreaming(boolean force) {
