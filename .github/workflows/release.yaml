@@ -6,12 +6,11 @@ name: CI
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
   pull_request:
-    branches: [release_2.0]
+    branches: [release_2.2]
   push:
-    branches: [release_2.0]
+    branches: [release_2.2]
 
   workflow_dispatch:
-
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
@@ -28,8 +27,8 @@ jobs:
           distribution: 'adopt'
       - name: setup
         run: |
-           docker run -d -p 9000:9000 --name minio1 -e "MINIO_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE" \
-           -e "MINIO_SECRET_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" minio/minio server /data
+          docker run -d -p 9000:9000 --name minio1 -e "MINIO_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE" \
+          -e "MINIO_SECRET_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" minio/minio server /data
       - name: run tests
         run: |
           mvn \
@@ -38,7 +37,7 @@ jobs:
                 -Dgpg.passphrase=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }} \
             clean test
   publish:
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/release_2.3'
     needs: test
     runs-on: ubuntu-latest
     steps:
@@ -51,15 +50,15 @@ jobs:
         run: |
           git checkout -f -b version-branch
           export revision=`npm version patch --no-commit-hooks -m "$(git log -1 --pretty=%B) .... bump version [skip ci]"`
-          git push origin version-branch:master --follow-tags
+          git push origin version-branch:release_2.3 --follow-tags
           echo revision=$revision >> $GITHUB_ENV
       - uses: actions/setup-node@v1
         with:
           node-version: 14
       - name: Install gpg secret key
         run: |
-            cat <(echo -e "${{ secrets.OSSRH_GPG_SECRET_KEY }}") | gpg --batch --import
-            gpg --list-secret-keys --keyid-format LONG
+          cat <(echo -e "${{ secrets.OSSRH_GPG_SECRET_KEY }}") | gpg --batch --import
+          gpg --list-secret-keys --keyid-format LONG
       - name: Deploy
         run: |
           mkdir ~/.m2
