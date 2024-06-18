@@ -35,7 +35,7 @@ jobs:
           mvn \
                 --no-transfer-progress \
                 --batch-mode \
-                -Dgpg.passphrase=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }} \
+                -DMAVEN_GPG_PASSPHRASE=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }} \
             clean test
   publish:
     if: github.ref == 'refs/heads/master'
@@ -71,7 +71,7 @@ jobs:
           mvn \
                 --no-transfer-progress \
                 --batch-mode \
-                -Dgpg.passphrase=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }} \
+                -DMAVEN_GPG_PASSPHRASE=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }} \
                 -Drevision=$revision$suffix \
                 -Drepo.id=ossrh \
                 -Drepo.login=${{ secrets.MVN_USER }} \
